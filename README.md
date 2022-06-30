@@ -7,7 +7,7 @@
 # A lightweight queue based on Redis Stream for webman plugin
 
 
-[![Latest Stable Version](http://poser.pugx.org/workbunny/webman-rabbitmq/v)](https://packagist.org/packages/workbunny/webman-rabbitmq) [![Total Downloads](http://poser.pugx.org/workbunny/webman-rabbitmq/downloads)](https://packagist.org/packages/workbunny/webman-rabbitmq) [![Latest Unstable Version](http://poser.pugx.org/workbunny/webman-rabbitmq/v/unstable)](https://packagist.org/packages/workbunny/webman-rabbitmq) [![License](http://poser.pugx.org/workbunny/webman-rabbitmq/license)](https://packagist.org/packages/workbunny/webman-rabbitmq) [![PHP Version Require](http://poser.pugx.org/workbunny/webman-rabbitmq/require/php)](https://packagist.org/packages/workbunny/webman-rabbitmq)
+[![Latest Stable Version](http://poser.pugx.org/workbunny/webman-rqueue/v)](https://packagist.org/packages/workbunny/webman-rqueue) [![Total Downloads](http://poser.pugx.org/workbunny/webman-rqueue/downloads)](https://packagist.org/packages/workbunny/webman-rqueue) [![Latest Unstable Version](http://poser.pugx.org/workbunny/webman-rqueue/v/unstable)](https://packagist.org/packages/workbunny/webman-rqueue) [![License](http://poser.pugx.org/workbunny/webman-rqueue/license)](https://packagist.org/packages/workbunny/webman-rqueue) [![PHP Version Require](http://poser.pugx.org/workbunny/webman-rqueue/require/php)](https://packagist.org/packages/workbunny/webman-rqueue)
 
 ## 常见问题
 
@@ -91,7 +91,7 @@ use Workbunny\WebmanRqueue\FastBuilder;
 
 class TestBuilder extends FastBuilder
 {
-   	// 默认的redis连接配置
+    // 默认的redis连接配置
     protected string $connection = 'default';
     // 消费组QOS
     protected int $prefetch_count = 1;
@@ -99,10 +99,13 @@ class TestBuilder extends FastBuilder
     protected int $queue_size = 4096;
     // 是否延迟队列
     protected bool $delayed = false;
-
-    public function handler(string $body, Connection $connection): string
+    // 消费回调
+    public function handler(string $body, Connection $connection): bool
     {
-        // TODO: Implement handler() method.
+        var_dump($body);
+        return true; // ack
+        # false // nack
+        # throw // nack
     }
 }
 ```
@@ -132,7 +135,5 @@ sync_publish(TestBuilder::instance(), 'abc'); # return bool
 use function Workbunny\WebmanRabbitMQ\sync_publish;
 use process\workbunny\rqueue\TestBuilder;
 
-sync_publish(TestBuilder::instance(), 'abc', [
-	'x-delay' => 10000, # 延迟10秒
-]); # return bool
+sync_publish(TestBuilder::instance(), 'abc', 1000); # return bool
 ```
