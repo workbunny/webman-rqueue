@@ -31,11 +31,6 @@ abstract class FastBuilder implements BuilderInterface
     private ?Connection $_connection = null;
 
     /**
-     * @var string|null
-     */
-    private ?string $_group = null;
-
-    /**
      * @var int|null
      */
     private ?int $_timer = null;
@@ -81,40 +76,51 @@ abstract class FastBuilder implements BuilderInterface
         $this->_timer = Timer::add($interval = 0.001, function () use ($worker, $interval){
 
             $client = $this->connection()->client();
-            $queue = $this->getMessage()->getQueue();
-            $group = $this->getMessage()->getGroup() . $worker->id;
-
-            if($this->_group === null){
-                $client->xGroup('CREATE', $queue, $group, '0', true);
-                $this->_group = $group;
-            }
-
-            if($res = $this->connection()->client()->xReadGroup(
+            // 创建组
+            $client->xGroup(
+                'CREATE',
+                $this->getMessage()->getQueue(),
+                $group = $this->getMessage()->getGroup() . $worker->id,
+                '0',
+                true
+            );
+            // 读取未确认的消息组
+            if($res = $client->xReadGroup(
                 $group,
                 'consumer',
                 [$this->getMessage()->getQueue() => '>'],
                 $this->getMessage()->getPrefetchCount(),
                 (int)($interval * 1000)
             )){
-
+                // 队列组
                 foreach ($res as $queue => $message){
+                    $ids = [];
+                    // 信息组
                     foreach ($message as $id => $value){
                         $body = $value['body'] ?? '';
                         $delay = $value['delay'] ?? 0;
                         $timestamp = $value['timestamp'] ?? 0;
-
+                        // delay消息
                         if($delay > 0 and (($delay / 1000 + $timestamp) - microtime(true)) > 0){
+                            // 重入队尾
                             $client->xAdd($queue,'*', $value);
                             $client->xAck($queue, $group, [$id]);
+                            $ids[] = $id;
                             continue;
                         }
                         try {
+                            // 消费
                             if(($this->getMessage()->getCallback())($body, $this->connection())){
                                 $client->xAck($queue, $group, [$id]);
+                                $ids[] = $id;
                                 continue;
                             }
                         }catch (\Throwable $throwable){}
                     }
+                    // 删除确认的消息
+                    Timer::add($interval, function() use ($client, $queue, $ids){
+                        $client->xDel($queue,$ids);
+                    }, [], false);
                 }
             }
         });
@@ -127,14 +133,10 @@ abstract class FastBuilder implements BuilderInterface
     public function onWorkerStop(Worker $worker): void
     {
         if($this->_connection){
-            $queue = $this->getMessage()->getQueue();
-            $group = $this->getMessage()->getGroup() . $worker->id;
-            $this->_connection->client()->xGroup('DESTROY', $queue, $group);
-            $this->_group = null;
-
             $this->_connection->client()->close();
             $this->_connection = null;
         }
+
         if($this->_timer){
             Timer::del($this->_timer);
             $this->_timer = null;
