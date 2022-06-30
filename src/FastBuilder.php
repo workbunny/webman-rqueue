@@ -99,14 +99,12 @@ abstract class FastBuilder implements BuilderInterface
 
                 foreach ($res as $queue => $message){
                     foreach ($message as $id => $value){
-                        $header = $value['header'] ?? [];
                         $body = $value['body'] ?? '';
-
-                        $delay = $header['x-delay'] ?? 0;
-                        $timestamp = $header['timestamp'] ?? 0;
+                        $delay = $value['delay'] ?? 0;
+                        $timestamp = $value['timestamp'] ?? 0;
 
                         if($delay > 0 and (($delay / 1000 + $timestamp) - microtime(true)) > 0){
-                            $client->xAdd($queue,'*', ['header' => $header, 'body' => $body]);
+                            $client->xAdd($queue,'*', $value);
                             $client->xAck($queue, $group, [$id]);
                             continue;
                         }
