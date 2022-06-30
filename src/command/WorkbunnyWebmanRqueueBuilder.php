@@ -131,7 +131,7 @@ class TestBuilder extends FastBuilder
     // 默认的redis连接配置
     protected string \$connection = 'default';
     // 消费组QOS
-    protected int \$prefetch_count = 1;
+    protected ?int \$prefetch_count = 1;
     // 队列最大数量
     protected int \$queue_size = 4096;
     // 是否延迟队列$
