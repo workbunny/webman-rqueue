@@ -8,24 +8,24 @@ abstract class AbstractMessage {
     protected string $_body = '';
     protected string $_group = '';
     protected int $_queueSize = 4096;
-    protected int $_prefetchCount = 1;
+    protected ?int $_prefetchCount = null;
     protected bool $_delayed = false;
 
     protected $_callback;
 
     /**
-     * @return int
+     * @return int|null
      */
-    public function getPrefetchCount(): int
+    public function getPrefetchCount(): ?int
     {
         return $this->_prefetchCount;
     }
 
     /**
-     * @param int $prefetchCount
+     * @param int|null $prefetchCount
      * @return void
      */
-    public function setPrefetchCount(int $prefetchCount): void
+    public function setPrefetchCount(?int $prefetchCount): void
     {
         $this->_prefetchCount = $prefetchCount;
     }

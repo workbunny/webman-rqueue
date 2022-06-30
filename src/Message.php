@@ -13,6 +13,7 @@ class Message extends AbstractMessage
      *  'group_name' => '',
      *  'queue_name' => '',
      *  'queue_size' => '',
+     *  'prefetch_count' => '',
      *  'is_delayed' => '',
      * ]
      */

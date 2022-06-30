@@ -17,6 +17,8 @@ function sync_publish(FastBuilder $builder, string $body, ?array $headers = null
     if($client->xLen($queue = $builder->getMessage()->getQueue()) >= $builder->getMessage()->getQueueSize()){
         return false;
     }
-    $client->xAdd($queue,'*', ['header' => $headers, 'body' => $body]);
+    $client->xAdd($queue,'*', ['header' => array_merge([
+        'timestamp' => microtime(true)
+    ], $headers ?? []), 'body' => $body]);
     return true;
 }

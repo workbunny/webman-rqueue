@@ -31,7 +31,7 @@ interface BuilderInterface
      * 消费响应
      * @param string $body
      * @param Connection $connection
-     * @return string
+     * @return bool
      */
-    public function handler(string $body, Connection $connection) : string;
+    public function handler(string $body, Connection $connection) : bool;
 }

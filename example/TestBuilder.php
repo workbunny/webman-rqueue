@@ -17,8 +17,8 @@ class TestBuilder extends FastBuilder
     // 是否延迟队列
     protected bool $delayed = false;
 
-    public function handler(string $body, Connection $connection): string
+    public function handler(string $body, Connection $connection): bool
     {
-        // TODO: Implement handler() method.
+        return true;
     }
 }

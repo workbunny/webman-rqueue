@@ -14,12 +14,11 @@ abstract class FastBuilder implements BuilderInterface
 {
     protected string $connection = 'default';
 
-    protected int $prefetch_count = 1;
+    protected ?int $prefetch_count = null;
 
     protected int $queue_size = 4096;
 
     protected bool $delayed = false;
-
 
     /**
      * @var AbstractMessage|Message
@@ -30,6 +29,11 @@ abstract class FastBuilder implements BuilderInterface
      * @var Connection|null
      */
     private ?Connection $_connection = null;
+
+    /**
+     * @var string|null
+     */
+    private ?string $_group = null;
 
     /**
      * @var int|null
@@ -59,7 +63,7 @@ abstract class FastBuilder implements BuilderInterface
         $message['queue_name'] = "workbunny:rqueue:queue:$name";
         $message['group_name'] = "workbunny:rqueue:group:$name";
 
-        $message['prefetch_count'] = $this->prefetch_count ?? 1;
+        $message['prefetch_count'] = $this->prefetch_count;
         $message['queue_size'] = $this->queue_size;
         $message['is_delayed'] = $this->delayed;
 
@@ -73,18 +77,48 @@ abstract class FastBuilder implements BuilderInterface
      */
     public function onWorkerStart(Worker $worker): void
     {
-        $this->_timer = Timer::add(0.2, function () use ($worker){
-            $group = $this->getMessage()->getGroup() . ':' . $worker->id;
-            $client = $this->connection()->client();
-            $client->xGroup('CREATE', $this->getMessage()->getQueue(), $group);
 
-            $client->xReadGroup(
+        $this->_timer = Timer::add($interval = 0.001, function () use ($worker, $interval){
+
+            $client = $this->connection()->client();
+            $queue = $this->getMessage()->getQueue();
+            $group = $this->getMessage()->getGroup() . $worker->id;
+
+            if($this->_group === null){
+                $client->xGroup('CREATE', $queue, $group, '0', true);
+                $this->_group = $group;
+            }
+
+            if($res = $this->connection()->client()->xReadGroup(
                 $group,
                 'consumer',
-                [$this->getMessage()->getQueue()],
+                [$this->getMessage()->getQueue() => '>'],
                 $this->getMessage()->getPrefetchCount(),
-                0.2 * 1000
-            );
+                (int)($interval * 1000)
+            )){
+
+                foreach ($res as $queue => $message){
+                    foreach ($message as $id => $value){
+                        $header = $value['header'] ?? [];
+                        $body = $value['body'] ?? '';
+
+                        $delay = $header['x-delay'] ?? 0;
+                        $timestamp = $header['timestamp'] ?? 0;
+
+                        if($delay > 0 and (($delay / 1000 + $timestamp) - microtime(true)) > 0){
+                            $client->xAdd($queue,'*', ['header' => $header, 'body' => $body]);
+                            $client->xAck($queue, $group, [$id]);
+                            continue;
+                        }
+                        try {
+                            if(($this->getMessage()->getCallback())($body, $this->connection())){
+                                $client->xAck($queue, $group, [$id]);
+                                continue;
+                            }
+                        }catch (\Throwable $throwable){}
+                    }
+                }
+            }
         });
     }
 
@@ -95,6 +129,11 @@ abstract class FastBuilder implements BuilderInterface
     public function onWorkerStop(Worker $worker): void
     {
         if($this->_connection){
+            $queue = $this->getMessage()->getQueue();
+            $group = $this->getMessage()->getGroup() . $worker->id;
+            $this->_connection->client()->xGroup('DESTROY', $queue, $group);
+            $this->_group = null;
+
             $this->_connection->client()->close();
             $this->_connection = null;
         }
