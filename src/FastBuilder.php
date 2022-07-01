@@ -97,7 +97,7 @@ abstract class FastBuilder implements BuilderInterface
                     $ids = [];
                     // 信息组
                     foreach ($message as $id => $value){
-                        $delay = $value['delay'] ?? 0;
+                        $delay = (int)($value['delay'] ?? 0);
                         $timestamp = $value['timestamp'] ?? 0;
                         // delay消息
                         if(
