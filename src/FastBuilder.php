@@ -80,14 +80,14 @@ abstract class FastBuilder implements BuilderInterface
             $client->xGroup(
                 'CREATE',
                 $this->getMessage()->getQueue(),
-                $group = $this->getMessage()->getGroup() . $worker->id,
+                $group = $this->getMessage()->getGroup(),
                 '0',
                 true
             );
             // 读取未确认的消息组
             if($res = $client->xReadGroup(
                 $group,
-                'consumer',
+                "consumer-$worker->id",
                 [$this->getMessage()->getQueue() => '>'],
                 $this->getMessage()->getPrefetchCount(),
                 (int)($interval * 1000)
