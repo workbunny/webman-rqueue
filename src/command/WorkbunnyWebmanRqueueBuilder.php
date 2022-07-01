@@ -126,7 +126,7 @@ namespace $namespace;
 use Illuminate\Redis\Connections\Connection;
 use Workbunny\WebmanRqueue\FastBuilder;
 
-class TestBuilder extends FastBuilder
+class $name extends FastBuilder
 {
     // 默认的redis连接配置
     protected string \$connection = 'default';
