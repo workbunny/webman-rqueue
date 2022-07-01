@@ -147,9 +147,10 @@ sync_publish(TestBuilder::instance(), 'abc', 10000); # return bool
 
 - 目前代码并**未生产验证**过，但我会及时维护，**欢迎 [issue](https://github.com/workbunny/webman-rqueue/issues) 和 PR**；
 
-- 其实 **Redis Stream队列** 没有 **delayed** 或 **non-delayed** 之分，我的代码将它们区分的原因是不希望 **delayed** 被滥用；
-开发者自己应该明确哪些消息是延迟的、哪些是立即的；延迟消息过多会导致消息堆积，从而占用Redis过多的资源；
- 
+- **Redis Stream** 本身没有 **delayed** 或 **non-delayed** 之分，组件代码将它们区分的原因是不希望 **delayed** 被滥用；开发者应该明确哪些消息是延迟的、哪些是立即的，并且明确体现，也方便维护，因为延迟消息过多会导致消息堆积，从而占用Redis过多的资源；
+
+- **Redis Stream** 的持久化依赖 **Redis** 本身的持久化策略，在一定情况下 **Redis Stream** 也并非是可靠型的消息队列;关于持久化相关内容，请仔细阅读 **[Redis中文文档](http://www.redis.cn/topics/persistence.html)**；
+
 - 继承实现 **AbstractMessage** 可以自定义Message；
 
 - **Builder** 可通过 **Builder->setMessage()** 可设置自定义配置；
