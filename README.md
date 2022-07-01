@@ -36,6 +36,7 @@
 
 简单易用高效，可以轻易的实现master/worker的队列模式（一个队列多个消费者）；
 
+支持延迟消息；
 
 ## 安装
 
@@ -102,9 +103,10 @@ class TestBuilder extends FastBuilder
     // 是否延迟队列
     protected bool $delayed = false;
     // 消费回调
-    public function handler(string $body, Connection $connection): bool
+    public function handler(string $msgid, array $msgvalue, Connection $connection): bool
     {
-        var_dump($body);
+    	var_dump($msgid); # 消息id
+        var_dump($msgvalue); # 消息体
         return true; // ack
         # false // nack
         # throw // nack
@@ -137,5 +139,17 @@ sync_publish(TestBuilder::instance(), 'abc'); # return bool
 use function Workbunny\WebmanRabbitMQ\sync_publish;
 use process\workbunny\rqueue\TestBuilder;
 
-sync_publish(TestBuilder::instance(), 'abc', 1000); # return bool
+# 延迟10秒
+sync_publish(TestBuilder::instance(), 'abc', 10000); # return bool
 ```
+
+## 说明
+
+- 目前代码并**未生产验证**过，但我会及时维护，**欢迎 [issue](https://github.com/workbunny/webman-rqueue/issues) 和 PR**；
+
+- 其实 **Redis Stream队列** 没有 **delayed** 或 **non-delayed** 之分，我的代码将它们区分的原因是不希望 **delayed** 被滥用；
+开发者自己应该明确哪些消息是延迟的、哪些是立即的；延迟消息过多会导致消息堆积，从而占用Redis过多的资源；
+ 
+- 继承实现 **AbstractMessage** 可以自定义Message；
+
+- **Builder** 可通过 **Builder->setMessage()** 可设置自定义配置；

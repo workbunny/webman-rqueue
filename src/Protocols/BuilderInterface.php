@@ -29,9 +29,10 @@ interface BuilderInterface
 
     /**
      * 消费响应
-     * @param string $body
+     * @param string $msgid
+     * @param array $msgvalue
      * @param Connection $connection
      * @return bool
      */
-    public function handler(string $body, Connection $connection) : bool;
+    public function handler(string $msgid, array $msgvalue, Connection $connection) : bool;
 }

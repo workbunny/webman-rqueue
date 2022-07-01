@@ -136,12 +136,15 @@ class TestBuilder extends FastBuilder
     protected int \$queue_size = 4096;
     // 是否延迟队列$
     $delayed
-    
-    public function handler(string \$body, Connection \$connection): bool
+    // 消费回调
+    public function handler(string \$msgid, array \$msgvalue, Connection \$connection) : bool
     {
-        // TODO: Implement handler() method.
-        return true;
-        # false 
+        var_dump('请重写handler()以便正常消费');
+        var_dump(\$msgid); # 消息id
+        var_dump(\$msgvalue); # 消息体
+        return true; // ack
+        # false // nack
+        # throw // nack
     }
 }
 doc;

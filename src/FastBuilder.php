@@ -97,11 +97,14 @@ abstract class FastBuilder implements BuilderInterface
                     $ids = [];
                     // 信息组
                     foreach ($message as $id => $value){
-                        $body = $value['body'] ?? '';
                         $delay = $value['delay'] ?? 0;
                         $timestamp = $value['timestamp'] ?? 0;
                         // delay消息
-                        if($delay > 0 and (($delay / 1000 + $timestamp) - microtime(true)) > 0){
+                        if(
+                            $this->getMessage()->isDelayed() and
+                            $delay > 0 and
+                            (($delay / 1000 + $timestamp) - microtime(true)) > 0
+                        ){
                             // 重入队尾
                             $client->xAdd($queue,'*', $value);
                             $client->xAck($queue, $group, [$id]);
@@ -109,15 +112,15 @@ abstract class FastBuilder implements BuilderInterface
                             continue;
                         }
                         try {
-                            // 消费
-                            if(($this->getMessage()->getCallback())($body, $this->connection())){
+                            // 消费回调handler
+                            if(($this->getMessage()->getCallback())($id, $value, $this->connection())){
                                 $client->xAck($queue, $group, [$id]);
                                 $ids[] = $id;
                                 continue;
                             }
                         }catch (\Throwable $throwable){}
                     }
-                    // 删除确认的消息
+                    // 删除ack的消息
                     Timer::add($interval, function() use ($client, $queue, $ids){
                         $client->xDel($queue,$ids);
                     }, [], false);
