@@ -10,7 +10,6 @@ class Install
      */
     protected static array $pathRelation = [
         'config/plugin/workbunny/webman-rqueue' => 'config/plugin/workbunny/webman-rqueue',
-        'command/WorkbunnyWebmanRqueueBuilder.php' => 'app/command/WorkbunnyWebmanRqueueBuilder.php',
     ];
 
     /**
