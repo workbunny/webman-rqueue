@@ -126,6 +126,8 @@ class TestBuilder extends FastBuilder
 
 - 发布普通消息
 
+**注：向普通队列发布延迟消息会抛出一个 RqueueException 异常**
+
 ```php
 use function Workbunny\WebmanRabbitMQ\sync_publish;
 use process\workbunny\rqueue\TestBuilder;
@@ -134,6 +136,8 @@ sync_publish(TestBuilder::instance(), 'abc'); # return bool
 ```
 
 - 发布延迟消息
+
+**注：向延迟队列发布普通消息会抛出一个 RqueueException 异常**
 
 ```php
 use function Workbunny\WebmanRabbitMQ\sync_publish;
