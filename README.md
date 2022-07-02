@@ -44,7 +44,7 @@
 composer require workbunny/webman-rqueue
 ```
 
-**注：本插件会在 app/command 目录下创建 Builder 命令， 请勿修改或删除 WorkbunnyWebmanRququqBuilder.php 文件！！！！**
+**注：本插件会在 app/command 目录下创建 Builder 命令， 请勿修改或删除 WorkbunnyWebmanRququeBuilder.php 文件！！！！**
 
 ## 使用
 

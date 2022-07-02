@@ -130,7 +130,7 @@ class $name extends FastBuilder
 {
     // 默认的redis连接配置
     protected string \$connection = 'default';
-    // 消费组QOS
+    // 消费者QOS
     protected ?int \$prefetch_count = 1;
     // 队列最大数量
     protected int \$queue_size = 4096;
