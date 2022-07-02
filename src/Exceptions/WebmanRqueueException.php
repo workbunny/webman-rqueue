@@ -5,7 +5,7 @@ namespace Workbunny\WebmanRqueue\Exceptions;
 
 use RuntimeException;
 
-class RqueueException extends RuntimeException
+class WebmanRqueueException extends RuntimeException
 {
 
 }
