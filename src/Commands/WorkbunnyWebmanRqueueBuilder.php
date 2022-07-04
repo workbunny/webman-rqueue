@@ -3,13 +3,12 @@ declare(strict_types=1);
 
 namespace Workbunny\WebmanRqueue\Commands;
 
-use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class WorkbunnyWebmanRqueueBuilder extends Command
+class WorkbunnyWebmanRqueueBuilder extends AbstractCommand
 {
     protected static $defaultName        = 'workbunny:rqueue-builder';
     protected static $defaultDescription = 'Create and initialize a workbunny/webman-rqueue Builder. ';
@@ -35,33 +34,11 @@ class WorkbunnyWebmanRqueueBuilder extends Command
         $count = $input->getArgument('count');
         $delayed = $input->getOption('delayed');
 
-        if (!($pos = strrpos($name, '/'))) {
-            $name = $this->getClassName($name, $delayed);
-            $file = "process/workbunny/rqueue/{$name}.php";
-            $namespace = 'process\workbunny\rqueue';
-        } else {
-            $path = substr($name, 0, $pos) . '/workbunny/rqueue';
-            $name = $this->getClassName(substr($name, $pos + 1), $delayed);
-            $file = "{$path}/{$name}.php";
-            $namespace = str_replace('/', '\\', $path);
-        }
+        list($name, $namespace, $file) = $this->getFileInfo($name, $delayed);
 
         $this->initBuilder($name, $namespace, (int)$count, $file, $output);
 
         return self::SUCCESS;
-    }
-
-    /**
-     * @param string $name
-     * @param bool $isDelayed
-     * @return string
-     */
-    protected function getClassName(string $name, bool $isDelayed): string
-    {
-        $class = preg_replace_callback('/:([a-zA-Z])/', function ($matches) {
-                return strtoupper($matches[1]);
-            }, ucfirst($name)) . 'Builder';
-        return $isDelayed ? $class . 'Delayed' : $class;
     }
 
     /**
@@ -148,7 +125,9 @@ class $name extends FastBuilder
     }
 }
 doc;
-        file_put_contents($file, $command_content);
+        if(!file_exists($file)){
+            file_put_contents($file, $command_content);
+        }
     }
 
 }

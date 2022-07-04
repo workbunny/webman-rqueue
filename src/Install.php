@@ -19,6 +19,7 @@ class Install
     public static function install()
     {
         static::installByRelation();
+        static::removeObsoleteCommand();
     }
 
     /**
@@ -68,6 +69,17 @@ class Install
                 continue;
             }
             remove_dir($path);
+        }
+    }
+
+    /**
+     * remove obsolete command
+     * @return void
+     */
+    public static function removeObsoleteCommand()
+    {
+        if(file_exists($file = base_path() . '/app/command/WorkbunnyWebmanRqueueBuilder.php')){
+            unlink($file);
         }
     }
     
