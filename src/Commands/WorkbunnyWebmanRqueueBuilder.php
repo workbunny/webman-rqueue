@@ -53,13 +53,13 @@ class WorkbunnyWebmanRqueueBuilder extends AbstractCommand
     {
         if(file_exists($process = config_path() . '/plugin/workbunny/webman-rqueue/process.php')){
             $processConfig = file_get_contents($process);
+            $config = config('plugin.workbunny.webman-rqueue.process', []);
             $processName = str_replace('\\', '.', $className = "$namespace\\$name");
 
-            if(strpos($processConfig, $processName) === false){
+            if(!isset($config[$processName])){
                 file_put_contents($process, preg_replace_callback('/(];)(?!.*\1)/',
                     function () use ($processName, $className, $count){
                         return <<<EOF
-
     '$processName' => [
         'handler' => \\$className::class,
         'count'   => $count
@@ -75,7 +75,7 @@ EOF;
             $output->writeln("<error>Builder {$name} failed to create: Config already exists. </error>");
             return;
         }
-        $output->writeln("<error>Builder {$name} failed to create: plugin/workbunny/webman-rabbitmq/process.php does not exist. </error>");
+        $output->writeln("<error>Builder {$name} failed to create: plugin/workbunny/webman-rqueue/process.php does not exist. </error>");
     }
 
     /**

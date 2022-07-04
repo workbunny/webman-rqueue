@@ -48,16 +48,17 @@ class WorkbunnyWebmanRqueueRemove extends AbstractCommand
      */
     protected function removeBuilder(string $name, string $namespace, string $file, OutputInterface $output)
     {
-        if(!file_exists($process = config_path() . '/plugin/workbunny/webman-rqueue/process.php')){
+        if(file_exists($process = config_path() . '/plugin/workbunny/webman-rqueue/process.php')){
             $processConfig = file_get_contents($process);
+            $config = config('plugin.workbunny.webman-rqueue.process', []);
             $processName = str_replace('\\', '.', "$namespace\\$name");
 
             // 清理配置文件
-            if(strpos($processConfig, $processName) === true){
-                file_put_contents($process, preg_replace_callback("/\r\n    '$processName' => [[\s\S]*?],/",
-                    function () {
-                        return '';
-                    }, $processConfig,1)
+            if(isset($config[$processName])){
+                file_put_contents($process, preg_replace_callback("/[\r\n|\n]    '$processName' => [[\s\S]*?],/",
+                        function () {
+                            return '';
+                        }, $processConfig,1)
                 );
             }
             // 清理文件
@@ -68,7 +69,7 @@ class WorkbunnyWebmanRqueueRemove extends AbstractCommand
             $output->writeln("<info>Builder {$name} cleared successfully. </info>");
             return;
         }
-        $output->writeln("<error>Builder {$name} failed to clear: plugin/workbunny/webman-rabbitmq/process.php does not exist. </error>");
+        $output->writeln("<error>Builder {$name} failed to clear: plugin/workbunny/webman-rqueue/process.php does not exist. </error>");
     }
 
 }

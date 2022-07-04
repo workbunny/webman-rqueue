@@ -30,13 +30,21 @@ class WorkbunnyWebmanRqueueList extends AbstractCommand
 
         /** @var SplFileInfo $file */
         foreach ($files as $file){
-            $file = $file->getPath() . DIRECTORY_SEPARATOR . $file->getFilename();
-            $name = str_replace('/', '.', str_replace($this->baseProcessPath, '', $file));
+            $key = str_replace(
+                '/',
+                '.',
+                str_replace(base_path() . '/' , '', $fileName = $file->getPath() . '/' . $file->getBasename('.php'))
+            );
+            $name = str_replace(base_path() . '/' . $this->baseProcessPath , '', $fileName);
             $rows[] = [
-                strpos($name,'Delayed') ? str_replace('BuilderDelayed','', $name) : str_replace('Builder','', $name),
-                $file->getPath() . DIRECTORY_SEPARATOR . $file->getFilename(),
-                $configs[$name]['handler'] ?? '--',
-                $configs[$name]['count'] ?? '--'
+                strtolower(
+                    strpos($name, 'BuilderDelayed') ?
+                        str_replace('BuilderDelayed', '', $name) :
+                        str_replace('Builder', '', $name)
+                ),
+                $file->getRealPath(),
+                $configs[$key]['handler'] ?? '--',
+                $configs[$key]['count'] ?? '--'
             ];
         }
 
@@ -55,16 +63,18 @@ class WorkbunnyWebmanRqueueList extends AbstractCommand
     protected function files(string $path): array
     {
         $files = [];
-        $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path, FilesystemIterator::FOLLOW_SYMLINKS));
-        /** @var SplFileInfo $file */
-        foreach ($iterator as $file) {
-            if($file->getExtension() !== 'php' and $file->isDir()){
-                continue;
+        if(is_dir($path)){
+            $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path, FilesystemIterator::FOLLOW_SYMLINKS));
+            /** @var SplFileInfo $file */
+            foreach ($iterator as $file) {
+                if($file->getExtension() !== 'php' and $file->isDir()){
+                    continue;
+                }
+                if(!strpos($file->getFilename(), 'Builder') and !strpos($file->getFilename(), 'BuilderDelayed')){
+                    continue;
+                }
+                $files[] = $file;
             }
-            if(!strpos($file->getFilename(), 'Builder') and !strpos($file->getFilename(), 'BuilderDelayed')){
-                continue;
-            }
-            $files[] = $file;
         }
         return $files;
     }
