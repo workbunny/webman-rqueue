@@ -44,29 +44,36 @@
 composer require workbunny/webman-rqueue
 ```
 
-**注：本插件会在 app/command 目录下创建 Builder 命令， 请勿修改或删除 WorkbunnyWebmanRququeBuilder.php 文件！！！！**
-
 ## 使用
 
 ### 创建Builder
 
+**Builder** 可以理解为类似 **ORM** 的 **Model**，创建一个 **Builder** 就对应了一个队列；使用该 **Builder** 对象进行 **publish()** 时，会向该队列投放消息；创建多少个 **Builder** 就相当于创建了多少条队列；
+
 - **创建一个消费者进程数量为1的普通队列：（在项目根目录执行）**
+
 ```shell
+# 在 process/workbunny/rqueue 目录下创建 TestBuilder.php
 ./webman workbunny:rqueue-builder test 1
 ```
 
 - **创建一个消费者进程数量为1的延迟队列：（在项目根目录执行）**
 ```shell
+# 在 process/workbunny/rqueue 目录下创建 TestBuilderDelayed.php
 ./webman workbunny:rqueue-builder test 1 -d
-	
 # 或
-	
 ./webman workbunny:rqueue-builder test 1 --delayed
 ```
 
-#### 说明：
+- **命令支持二级菜单**
+```shell
+# 在 process/workbunny/rqueue/project 目录下创建 TestBuilder.php
+./webman workbunny:rqueue-builder project/test 1
 
-- **Builder** 可以理解为类似 **ORM** 的 **Model**，创建一个 **Builder** 就对应了一个队列；使用该 **Builder** 对象进行 **publish()** 时，会向该队列投放消息；创建多少个 **Builder** 就相当于创建了多少条队列；
+# 延迟同理
+```
+
+#### 说明：
 
 - **命令结构：**
 ```shell
@@ -80,7 +87,6 @@ workbunny:rqueue-builder [-d|--delayed] [--] <name> <count>
 - 在项目根目录下命令会在 **process/workbunny/rqueue** 路径下创建一个Builder，并且将该Builder自动加入 **config/plugin/workbunny/webman-rqueue/process.php** 配置中作为自定义进程启动；**（如不需要自动加载消费者进程，请自行注释该配置）**；
 
 - 消费是异步的，不会阻塞当前进程，不会影响 **webman/workerman** 的 **status**；
-
 
 - **Builder文件结构入下，可自行调整类属性：**
 ```php
@@ -114,9 +120,40 @@ class TestBuilder extends FastBuilder
 }
 ```
 
+### 移除Builder
+
+- **移除名为 test 的普通队列：（在项目根目录执行）**
+
+```shell
+./webman workbunny:rqueue-remove test
+```
+
+- **移除名为 test 的延迟队列：（在项目根目录执行）**
+```shell
+./webman workbunny:rqueue-remove test -d
+# 或
+./webman workbunny:rqueue-remove test --delayed
+```
+
+### 查看Builder
+
+```shell
+./webman workbunny:rqueue-list
+```
+
+**注：当 Builder 未启动时，handler 与 count 显示为 --**
+
+```shell
++----------+--------------------------------------------------------------------+-------------------------------------------------+-------+
+| name     | file                                                               | handler                                         | count |
++----------+--------------------------------------------------------------------+-------------------------------------------------+-------+
+| test     | /var/www/your-project/process/workbunny/rqueue/TestBuilder.php     | process\workbunny\rqueue\TestBuilder            | 1     |
++----------+--------------------------------------------------------------------+-------------------------------------------------+-------+
+```
+
 ### 生产
 
-- 每个builder各包含一个连接，使用多个builder会创建多个连接
+- 每个 Builder 各包含一个连接，使用多个 Builder 会创建多个连接
 
 - 生产消息默认不关闭当前连接
 
@@ -149,7 +186,7 @@ sync_publish(TestBuilder::instance(), 'abc', 10000); # return bool
 
 ## 说明
 
-- 目前代码并**未生产验证**过，但我会及时维护，**欢迎 [issue](https://github.com/workbunny/webman-rqueue/issues) 和 PR**；
+- **小范围生产验证中，欢迎 [issue](https://github.com/workbunny/webman-rqueue/issues) 和 PR**；
 
 - **Redis Stream** 本身没有 **delayed** 或 **non-delayed** 之分，组件代码将它们区分的原因是不希望 **delayed** 被滥用；开发者应该明确哪些消息是延迟的、哪些是立即的，并且明确体现，也方便维护，因为延迟消息过多会导致消息堆积，从而占用Redis过多的资源；
 
