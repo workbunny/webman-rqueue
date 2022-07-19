@@ -122,6 +122,8 @@ class TestBuilder extends FastBuilder
 
 ### 移除Builder
 
+该命令会移除process.php中的配置及对应Builder文件；
+
 - **移除名为 test 的普通队列：（在项目根目录执行）**
 
 ```shell
@@ -135,6 +137,13 @@ class TestBuilder extends FastBuilder
 ./webman workbunny:rqueue-remove test --delayed
 ```
 
+- **关闭名为 test 的普通队列：（在项目根目录执行）**
+```shell
+./webman workbunny:rqueue-remove test -c
+# 或
+./webman workbunny:rqueue-remove test --close
+```
+
 ### 查看Builder
 
 ```shell
@@ -144,11 +153,12 @@ class TestBuilder extends FastBuilder
 **注：当 Builder 未启动时，handler 与 count 显示为 --**
 
 ```shell
-+----------+--------------------------------------------------------------------+-------------------------------------------------+-------+
-| name     | file                                                               | handler                                         | count |
-+----------+--------------------------------------------------------------------+-------------------------------------------------+-------+
-| test     | /var/www/your-project/process/workbunny/rqueue/TestBuilder.php     | process\workbunny\rqueue\TestBuilder            | 1     |
-+----------+--------------------------------------------------------------------+-------------------------------------------------+-------+
++----------+-----------------------------------------------------------------------+-------------------------------------------------+-------+
+| name     | file                                                                  | handler                                         | count |
++----------+-----------------------------------------------------------------------+-------------------------------------------------+-------+
+| test     | /var/www/your-project/process/workbunny/rqueue/TestBuilder.php        | process\workbunny\rqueue\TestBuilder            | 1     |
+| test -d  | /var/www/your-project/process/workbunny/rqueue/TestBuilderDelayed.php | process\workbunny\rqueue\TestBuilderDelayed     | 1     |
++----------+-----------------------------------------------------------------------+-------------------------------------------------+-------+
 ```
 
 ### 生产
