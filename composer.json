@@ -17,13 +17,13 @@
   "require": {
     "php": ">=7.4",
     "webman/console": "^1.0",
-    "psr/container": "^1.1.1",
-    "illuminate/redis": "^8.83",
-    "illuminate/events": "^8.83"
+    "psr/container": "^1.0 | ^2.0",
+    "illuminate/redis": "^8.0",
+    "illuminate/events": "^8.0"
   },
   "require-dev": {
-    "workerman/webman-framework": "^1.3.0",
-    "symfony/var-dumper": "^5.4"
+    "workerman/webman-framework": "^1.0",
+    "symfony/var-dumper": "^5.0"
   },
   "autoload": {
     "psr-4": {
