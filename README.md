@@ -6,8 +6,7 @@
 
 # A lightweight queue based on Redis Stream for webman plugin
 
-
-[![Latest Stable Version](http://poser.pugx.org/workbunny/webman-rqueue/v)](https://packagist.org/packages/workbunny/webman-rqueue) [![Total Downloads](http://poser.pugx.org/workbunny/webman-rqueue/downloads)](https://packagist.org/packages/workbunny/webman-rqueue) [![Latest Unstable Version](http://poser.pugx.org/workbunny/webman-rqueue/v/unstable)](https://packagist.org/packages/workbunny/webman-rqueue) [![License](http://poser.pugx.org/workbunny/webman-rqueue/license)](https://packagist.org/packages/workbunny/webman-rqueue) [![PHP Version Require](http://poser.pugx.org/workbunny/webman-rqueue/require/php)](https://packagist.org/packages/workbunny/webman-rqueue)
+[![Latest Stable Version](https://badgen.net/packagist/v/workbunny/webman-rqueue/latest)](https://packagist.org/packages/workbunny/webman-rqueue) [![Total Downloads](https://badgen.net/packagist/dt/workbunny/webman-rqueue)](https://packagist.org/packages/workbunny/webman-rqueue) [![License](https://badgen.net/packagist/license/workbunny/webman-rqueue)](https://packagist.org/packages/workbunny/webman-rqueue) [![PHP Version Require](https://badgen.net/packagist/php/workbunny/webman-rqueue)](https://packagist.org/packages/workbunny/webman-rqueue)
 
 ## 常见问题
 
