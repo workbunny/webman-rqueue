@@ -96,29 +96,30 @@ abstract class FastBuilder implements BuilderInterface
                 foreach ($res as $queue => $message){
                     $ids = [];
                     // 信息组
-                    foreach ($message as $id => $value){
-                        $delay = (int)($value['delay'] ?? 0);
-                        $timestamp = $value['timestamp'] ?? 0;
-                        // delay消息
-                        if(
-                            $this->getMessage()->isDelayed() and
-                            $delay > 0 and
-                            (($delay / 1000 + $timestamp) - microtime(true)) > 0
-                        ){
-                            // 重入队尾
-                            $client->xAdd($queue,'*', $value);
-                            $client->xAck($queue, $group, [$id]);
-                            $ids[] = $id;
-                            continue;
-                        }
-                        try {
-                            // 消费回调handler
-                            if(($this->getMessage()->getCallback())($id, $value, $this->connection())){
+                    foreach ($message as $id => $value) {
+                        if(isset($value['_header']) and isset($value['_body'])) {
+                            // delay消息
+                            if($this->getMessage()->isDelayed() and $delay > 0 and (($delay / 1000 + $timestamp) - microtime(true)) > 0) {
+                                // 重入队尾
+                                $client->xAdd($queue,'*', $value);
                                 $client->xAck($queue, $group, [$id]);
                                 $ids[] = $id;
                                 continue;
                             }
-                        }catch (\Throwable $throwable){}
+                            try {
+                                // 消费回调handler
+                                if(($this->getMessage()->getCallback())($id, $value, $this->connection())){
+                                    $client->xAck($queue, $group, [$id]);
+                                    $ids[] = $id;
+                                    continue;
+                                }
+                            }catch (\Throwable $throwable){
+                                continue;
+                            }
+                        }
+
+                        $client->xAck($queue, $group, [$id]);
+                        $ids[] = $id;
                     }
                     // 删除ack的消息
                     Timer::add($interval, function() use ($client, $queue, $ids){

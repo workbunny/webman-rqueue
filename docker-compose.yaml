@@ -1,0 +1,22 @@
+version: "3"
+services:
+  webman-rqueue-php:
+    restart: always
+    container_name: webman-rqueue-php
+    build:
+      context: ./
+    image: webman-rqueue-php
+    volumes:
+      - ./:/var/www
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "10"
+    tty: true
+  redis:
+    restart: always
+    container_name: redis
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"

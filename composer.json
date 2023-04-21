@@ -6,7 +6,7 @@
   "authors": [
     {
       "name": "chaz6chez",
-      "email": "250220719@qq.com",
+      "email": "chaz6chez1993@qoutlook.com",
       "homepage": "https://chaz6chez.cn"
     }
   ],
@@ -15,11 +15,12 @@
     "source": "https://github.com/workbunny/webman-rqueue"
   },
   "require": {
-    "php": ">=7.4",
+    "php": "^8.1",
+    "ext-redis": "*",
     "webman/console": "^1.0",
     "psr/container": "^1.0 | ^2.0",
-    "illuminate/redis": "^8.0",
-    "illuminate/events": "^8.0"
+    "illuminate/redis": "^10.0",
+    "illuminate/events": "^10.0"
   },
   "require-dev": {
     "workerman/webman-framework": "^1.0",
