@@ -5,11 +5,14 @@ namespace Workbunny\WebmanRqueue\Builders;
 use Illuminate\Redis\Connections\Connection;
 use support\Redis;
 use Workbunny\WebmanRqueue\BuilderConfig;
-use Workbunny\WebmanRqueue\Header;
+use Workbunny\WebmanRqueue\Builders\Traits\MessageQueueMethod;
+use Workbunny\WebmanRqueue\Headers;
 use Workerman\Worker;
 
 abstract class AbstractBuilder
 {
+    use MessageQueueMethod;
+
     public static bool $debug = false;
 
     /** @var string redis配置 */
@@ -28,9 +31,9 @@ abstract class AbstractBuilder
     private static ?int $_mainTimer = null;
 
     /**
-     * @var Header|null
+     * @var Headers|null
      */
-    private ?Header $_header = null;
+    private ?Headers $_header = null;
 
     /**
      * @var BuilderConfig
@@ -45,7 +48,7 @@ abstract class AbstractBuilder
     public function __construct()
     {
         $this->setBuilderConfig(new BuilderConfig());
-        $this->setHeader(new Header());
+        $this->setHeader(new Headers());
         $this->setConnection(Redis::connection($this->connection));
     }
 
@@ -102,17 +105,17 @@ abstract class AbstractBuilder
     }
 
     /**
-     * @return Header|null
+     * @return Headers|null
      */
-    public function getHeader(): ?Header
+    public function getHeader(): ?Headers
     {
         return $this->_header;
     }
 
     /**
-     * @param Header|null $header
+     * @param Headers|null $header
      */
-    public function setHeader(?Header $header): void
+    public function setHeader(?Headers $header): void
     {
         $this->_header = $header;
     }

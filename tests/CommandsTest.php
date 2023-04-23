@@ -2,27 +2,13 @@
 
 namespace Workbunny\Tests;
 
-use PHPUnit\Framework\TestCase;
 use Workbunny\WebmanRqueue\Builders\AbstractBuilder;
-use Workbunny\WebmanRqueue\Commands\AbstractCommand;
 
 /**
  * @runTestsInSeparateProcesses
  */
-final class CommandsTest extends TestCase
+final class CommandsTest extends BaseTestCase
 {
-    protected function exec(string $command): array
-    {
-        exec($command, $output, $resultCode);
-        return [$output, $resultCode];
-    }
-
-    protected function fileIsset(string $name, bool $delayed): bool
-    {
-        list(, , $file) = AbstractCommand::getFileInfo($name, $delayed);
-        return file_exists($file);
-    }
-
     protected function setUp(): void
     {
         AbstractBuilder::$debug = true;

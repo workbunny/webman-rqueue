@@ -2,9 +2,9 @@
 
 namespace Workbunny\WebmanRqueue\Builders\Traits;
 
-use Redis;
 use RedisException;
 use Workbunny\WebmanRqueue\Exceptions\WebmanRqueueException;
+use Workbunny\WebmanRqueue\Headers;
 use Workerman\Worker;
 
 trait MessageQueueMethod
@@ -74,16 +74,16 @@ trait MessageQueueMethod
 
     /**
      * @param string $body
-     * @param array $headers
+     * @param array $headers = [
+     *  @see Headers
+     * ]
      * @return bool
-     * @throws RedisException
+     * @throws WebmanRqueueException
      */
     public function publish(string $body, array $headers = []): bool
     {
         $client = $this->getConnection()->client();
-        $header = $this->getHeader()->clean()->init($headers);
-        $header->clean();
-        $header->init($headers);
+        $header = new Headers($headers);
         if(
             ($header->_delay and !$this->getBuilderConfig()->isDelayed()) or
             (!$header->_delay and $this->getBuilderConfig()->isDelayed())
@@ -92,76 +92,86 @@ trait MessageQueueMethod
         }
         $queue = $this->getBuilderConfig()->getQueue();
         $queueSize = $this->getBuilderConfig()->getQueueSize();
-        if($queueSize > 0) {
-            $queueLen = $client->xLen($queue);
-            if($queueLen >= $queueSize){
-                return false;
+        try {
+            if($queueSize > 0) {
+                $queueLen = $client->xLen($queue);
+                if($queueLen >= $queueSize){
+                    return false;
+                }
             }
+            return (bool) $client->xAdd($queue, (string)$header->_id, [
+                '_header' => $header->toString(),
+                '_body'   => $body,
+            ]);
+        }catch (RedisException $exception) {
+            throw new WebmanRqueueException($exception->getMessage(), $exception->getCode(), $exception);
         }
-
-        $client->xAdd($queue,'*', [
-            '_header' => $header->toArray(),
-            '_body'   => $body,
-        ]);
-        return true;
     }
 
     /**
      * @param Worker $worker
      * @param bool $del
      * @return void
-     * @throws RedisException
+     * @throws WebmanRqueueException
      */
     public function consume(Worker $worker, bool $del = true): void
     {
-        $client = $this->getConnection()->client();
-        $builderConfig = $this->getBuilderConfig();
-        $queueName = $builderConfig->getQueue();
-        $groupName = $builderConfig->getGroup();
-        $consumerName = "$groupName-$worker->id";
-        // create group
-        $client->xGroup('CREATE', $queueName, $groupName,'0', true);
-        // group read
-        if($res = $client->xReadGroup(
-            $groupName, $consumerName, [$queueName => '>'], $builderConfig->getPrefetchCount(),
-            $this->timerInterval >= 1 ? $this->timerInterval : null
-        )) {
-            $ids = [];
-            // messages
-            foreach ($res[$queueName] ?? [] as $id => $value){
-                // drop
-                if(!isset($value['_header']) or !isset($value['_body'])) {
-                    $client->xAck($queueName, $groupName, $this->idsAdd($ids, $id));
-                    continue;
-                }
-                // delay message
-                $this->getHeader()->clean()->init($value['_header']);
-                if(
-                    $this->getBuilderConfig()->isDelayed() and $this->getHeader()->_delay > 0 and
-                    (($this->getHeader()->_delay / 1000 + $this->getHeader()->_timestamp) - microtime(true)) > 0
-                ){
-                    // republish
-                    $client->xAdd($queueName, '*', $this->getHeader()->toArray());
-                    $client->xAck($queueName, $groupName, $this->idsAdd($ids, $id));
-                    continue;
-                }
-                try {
-                    // handler
-                    if(!\call_user_func($this->getBuilderConfig()->getCallback(), $id, $value, $this->getConnection())) {
-                        // false to republish
-                        $this->getHeader()->_count = $this->getHeader()->_count + 1;
-                        $client->xAdd($queueName, '*', $this->getHeader()->toArray());
+        try {
+            $client = $this->getConnection()->client();
+            $builderConfig = $this->getBuilderConfig();
+            $queueName = $builderConfig->getQueue();
+            $groupName = $builderConfig->getGroup();
+            $consumerName = "$groupName-$worker->id";
+            // create group
+            $client->xGroup('CREATE', $queueName, $groupName,'0', true);
+            // group read
+            if($res = $client->xReadGroup(
+                $groupName, $consumerName, [$queueName => '>'], $builderConfig->getPrefetchCount(),
+                $this->timerInterval >= 1 ? $this->timerInterval : null
+            )) {
+                $ids = [];
+                // messages
+                foreach ($res[$queueName] ?? [] as $id => $message){
+                    // drop
+                    if(!isset($message['_header']) or !isset($message['_body'])) {
+                        $client->xAck($queueName, $groupName, $this->idsAdd($ids, $id));
+                        continue;
                     }
-                    $client->xAck($queueName, $groupName, $this->idsAdd($ids, $id));
-                }catch (\Throwable $throwable) {
-                    $this->getHeader()->_count = $this->getHeader()->_count + 1;
-                    $this->getHeader()->_error = $throwable->getMessage();
-                    $client->xAdd($queueName, '*', $this->getHeader()->toArray());
-                    $client->xAck($queueName, $groupName, $this->idsAdd($ids, $id));
+                    $header = new Headers($message['_header']);
+                    $body = $message['_body'];
+                    // delay message
+                    if(
+                        $this->getBuilderConfig()->isDelayed() and $header->_delay > 0 and
+                        (($header->_delay / 1000 + $header->_timestamp) - microtime(true)) > 0
+                    ){
+                        // republish
+                        $header->_id = '*';
+                        $this->publish($body, $header->toArray());
+                        $client->xAck($queueName, $groupName, $this->idsAdd($ids, $id));
+                        continue;
+                    }
+                    try {
+                        // handler
+                        if(!\call_user_func($this->getBuilderConfig()->getCallback(), $id, $message, $this->getConnection())) {
+                            // false to republish
+                            $header->_count = $header->_count + 1;
+                            $header->_id    = '*';
+                            $this->publish($body, $header->toArray());
+                        }
+                        $client->xAck($queueName, $groupName, $this->idsAdd($ids, $id));
+                    }catch (\Throwable $throwable) {
+                        $header->_count = $header->_count + 1;
+                        $header->_error = $throwable->getMessage();
+                        $header->_id    = '*';
+                        $this->publish($body, $header->toArray());
+                        $client->xAck($queueName, $groupName, $this->idsAdd($ids, $id));
+                    }
                 }
+                // del
+                if($del) { $client->xDel($queueName, $ids); }
             }
-            // del
-            if($del) { $client->xDel($queueName, $ids); }
+        }catch (RedisException $exception) {
+            throw new WebmanRqueueException($exception->getMessage(), $exception->getCode(), $exception);
         }
     }
 }

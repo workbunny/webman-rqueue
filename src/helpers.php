@@ -2,7 +2,6 @@
 
 namespace Workbunny\WebmanRqueue;
 
-use RedisException;
 use SplFileInfo;
 use Webman\Config;
 use Workbunny\WebmanRqueue\Builders\AbstractBuilder;
@@ -15,9 +14,9 @@ use Workbunny\WebmanRqueue\Exceptions\WebmanRqueueException;
  * @param string $body
  * @param array $headers
  * @return bool
- * @throws RedisException
+ * @throws WebmanRqueueException
  */
-function sync_publish(QueueBuilder $builder, string $body, array $headers = []) : bool
+function sync_publish(AbstractBuilder $builder, string $body, array $headers = []) : bool
 {
     return $builder->publish($body, $headers);
 }

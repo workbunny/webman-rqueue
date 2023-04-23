@@ -100,10 +100,10 @@ class GroupBuilder extends AbstractBuilder
 
 namespace $namespace;
 
-use Workbunny\WebmanRqueue\Builders\QueueBuilder;
+use Workbunny\WebmanRqueue\Builders\GroupBuilder;
 use Illuminate\Redis\Connections\Connection;
 
-class $className extends QueueBuilder
+class $className extends GroupBuilder
 {
     
     /** @see QueueBuilder::\$config */
