@@ -1,0 +1,34 @@
+name: CI
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  PHPUnit:
+    name: PHPUnit (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php:
+          - "8.3"
+          - "8.2"
+          - "8.1"
+          - "8.0"
+        redis:
+          - "7"
+          - "6"
+    steps:
+      - uses: actions/checkout@v3
+      - uses: supercharge/redis-github-action@1.5.0
+        with:
+          redis-version: ${{ matrix.redis }}
+          redis-container-name: "redis"
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          tools: phpunit:9, composer:v2
+          coverage: none
+      - run: composer install
+      - run: vendor/bin/phpunit

@@ -5,15 +5,32 @@ namespace Workbunny\WebmanRqueue\Builders;
 use Illuminate\Redis\Connections\Connection;
 use support\Redis;
 use Workbunny\WebmanRqueue\BuilderConfig;
+use Workbunny\WebmanRqueue\Header;
 use Workerman\Worker;
 
 abstract class AbstractBuilder
 {
     public static bool $debug = false;
+
+    /** @var string redis配置 */
+    protected string $connection = 'default';
+    /** @var float|null 消费间隔 1ms */
+    protected ?float $timerInterval = 1;
+
     /**
      * @var AbstractBuilder[]
      */
     private static array $_builders = [];
+
+    /**
+     * @var int|null
+     */
+    private static ?int $_mainTimer = null;
+
+    /**
+     * @var Header|null
+     */
+    private ?Header $_header = null;
 
     /**
      * @var BuilderConfig
@@ -27,8 +44,9 @@ abstract class AbstractBuilder
 
     public function __construct()
     {
-        $this->setConnection(Redis::connection(config('plugin.workbunny.webman-rabbitmq.app.connection', 'default')));
         $this->setBuilderConfig(new BuilderConfig());
+        $this->setHeader(new Header());
+        $this->setConnection(Redis::connection($this->connection));
     }
 
     /**
@@ -65,6 +83,38 @@ abstract class AbstractBuilder
     public function setBuilderConfig(BuilderConfig $builderConfig): void
     {
         $this->_builderConfig = $builderConfig;
+    }
+
+    /**
+     * @return int|null
+     */
+    public static function getMainTimer(): ?int
+    {
+        return self::$_mainTimer;
+    }
+
+    /**
+     * @param int|null $mainTimer
+     */
+    public static function setMainTimer(?int $mainTimer): void
+    {
+        self::$_mainTimer = $mainTimer;
+    }
+
+    /**
+     * @return Header|null
+     */
+    public function getHeader(): ?Header
+    {
+        return $this->_header;
+    }
+
+    /**
+     * @param Header|null $header
+     */
+    public function setHeader(?Header $header): void
+    {
+        $this->_header = $header;
     }
 
     /**

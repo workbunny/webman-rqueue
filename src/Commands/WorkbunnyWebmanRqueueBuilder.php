@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Workbunny\WebmanRqueue\Commands;
 
@@ -7,6 +6,9 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Workbunny\WebmanRqueue\Builders\AbstractBuilder;
+use function Workbunny\WebmanRqueue\config_path;
+use function Workbunny\WebmanRqueue\config;
 
 class WorkbunnyWebmanRqueueBuilder extends AbstractCommand
 {
@@ -16,11 +18,12 @@ class WorkbunnyWebmanRqueueBuilder extends AbstractCommand
     /**
      * @return void
      */
-    protected function configure()
+    protected function configure(): void
     {
-        $this->addArgument('name', InputArgument::REQUIRED, 'builder name');
-        $this->addArgument('count', InputArgument::REQUIRED, 'builder count');
-        $this->addOption('delayed', 'd', InputOption::VALUE_NONE, 'Delayed mode');
+        $this->addArgument('name', InputArgument::REQUIRED, 'Builder name. ');
+        $this->addArgument('count', InputArgument::OPTIONAL, 'Number of processes started by builder. ', 1);
+        $this->addOption('mode', 'm', InputOption::VALUE_REQUIRED, 'Builder mode: queue, rpc', 'queue');
+        $this->addOption('delayed', 'd', InputOption::VALUE_NONE, 'Delay mode builder. ');
     }
 
     /**
@@ -30,104 +33,53 @@ class WorkbunnyWebmanRqueueBuilder extends AbstractCommand
      */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $name = $input->getArgument('name');
-        $count = $input->getArgument('count');
+        $name    = $input->getArgument('name');
+        $count   = $input->getArgument('count');
         $delayed = $input->getOption('delayed');
-
+        $mode    = $input->getOption('mode');
         list($name, $namespace, $file) = $this->getFileInfo($name, $delayed);
-
-        $this->initBuilder($name, $namespace, (int)$count, $file, $output);
-
-        return self::SUCCESS;
-    }
-
-    /**
-     * @param string $name
-     * @param string $namespace
-     * @param int $count
-     * @param string $file
-     * @param OutputInterface $output
-     * @return void
-     */
-    protected function initBuilder(string $name, string $namespace, int $count, string $file, OutputInterface $output)
-    {
-        if(file_exists($process = config_path() . '/plugin/workbunny/webman-rqueue/process.php')){
-            $processConfig = file_get_contents($process);
-            $config = config('plugin.workbunny.webman-rqueue.process', []);
-            $processName = str_replace('\\', '.', $className = "$namespace\\$name");
-
-            if(!isset($config[$processName])){
-                file_put_contents($process, preg_replace_callback('/(];)(?!.*\1)/',
-                    function () use ($processName, $className, $count){
-                        return <<<EOF
+        // check process.php
+        if(!file_exists($process = config_path() . '/plugin/workbunny/webman-rqueue/process.php')) {
+            return $this->error($output, "Builder {$name} failed to create: plugin/workbunny/webman-rqueue/process.php does not exist.");
+        }
+        // check config
+        $config = config('plugin.workbunny.webman-rqueue.process', []);
+        $processName = \str_replace('\\', '.', $className = "$namespace\\$name");
+        if(isset($config[$processName])){
+            return $this->error($output, "Builder {$name} failed to create: Config already exists.");
+        }
+        // get mode
+        /** @var AbstractBuilder $builderClass */
+        $builderClass = $this->getBuilder($mode);
+        if($builderClass === null) {
+            return $this->error($output, "Builder {$name} failed to create: Mode {$mode} does not exist.");
+        }
+        // config set
+        if(\file_put_contents($process, \preg_replace_callback('/(];)(?!.*\1)/',
+                function () use ($processName, $className, $count, $mode) {
+                    return <<<DOC
     '$processName' => [
         'handler' => \\$className::class,
-        'count'   => $count
+        'count'   => {$count},
+        'mode'    => '$mode',
     ],
 ];
-EOF;
-                    }, $processConfig,1));
-
-                $this->createBuilder($name, $namespace, $file);
-                $output->writeln("<info>Builder {$name} created successfully. </info>");
-                return;
+DOC;
+                }, \file_get_contents($process),1)) !== false) {
+            $this->info($output, "Config updated.");
+        }
+        // dir create
+        if (!\is_dir($path = \pathinfo($file, PATHINFO_DIRNAME))) {
+            \mkdir($path, 0777, true);
+        }
+        // file create
+        if(!\file_exists($file)){
+            if(\file_put_contents($file, $builderClass::classContent(
+                    $namespace, $name, \str_ends_with($name, 'Delayed')
+                )) !== false) {
+                $this->info($output, "Builder created.");
             }
-            $output->writeln("<error>Builder {$name} failed to create: Config already exists. </error>");
-            return;
         }
-        $output->writeln("<error>Builder {$name} failed to create: plugin/workbunny/webman-rqueue/process.php does not exist. </error>");
+        return $this->success($output, "Builder {$name} created successfully.");
     }
-
-    /**
-     * @param string $name
-     * @param string $namespace
-     * @param string $file
-     * @return void
-     */
-    protected function createBuilder(string $name, string $namespace, string $file)
-    {
-        $delayed = (substr($name, -strlen('Delayed')) === 'Delayed')
-            ? 'protected bool $delayed = true;'
-            : 'protected bool $delayed = false;';
-
-        $path = pathinfo($file, PATHINFO_DIRNAME);
-        if (!is_dir($path)) {
-            mkdir($path, 0777, true);
-        }
-        $command_content = <<<doc
-<?php
-declare(strict_types=1);
-
-namespace $namespace;
-
-use Illuminate\Redis\Connections\Connection;
-use Workbunny\WebmanRqueue\FastBuilder;
-
-class $name extends FastBuilder
-{
-    // 默认的redis连接配置
-    protected string \$connection = 'default';
-    // 消费者QOS
-    protected ?int \$prefetch_count = 1;
-    // 队列最大数量
-    protected int \$queue_size = 4096;
-    // 是否延迟队列$
-    $delayed
-    // 消费回调
-    public function handler(string \$msgid, array \$msgvalue, Connection \$connection) : bool
-    {
-        var_dump('请重写handler()以便正常消费');
-        var_dump(\$msgid); # 消息id
-        var_dump(\$msgvalue); # 消息体
-        return true; // ack
-        # false // nack
-        # throw // nack
-    }
-}
-doc;
-        if(!file_exists($file)){
-            file_put_contents($file, $command_content);
-        }
-    }
-
 }

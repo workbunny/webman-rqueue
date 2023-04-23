@@ -8,7 +8,7 @@ use Workbunny\WebmanRqueue\Builders\Traits\MessageQueueMethod;
 use Workerman\Timer;
 use Workerman\Worker;
 
-class QueueBuilder extends AbstractBuilder
+class GroupBuilder extends AbstractBuilder
 {
     use MessageQueueMethod;
 
@@ -24,6 +24,8 @@ class QueueBuilder extends AbstractBuilder
      * ]
      */
     protected array $config = [];
+
+    private static ?int $_delTimer = null;
 
     public function __construct()
     {
@@ -43,8 +45,12 @@ class QueueBuilder extends AbstractBuilder
         if($this->getConnection()){
             // check pending
 
-            // consume
-            self::setMainTimer(Timer::add($this->timerInterval / 1000, function () use($worker) {
+            // del timer
+            self::$_delTimer = Timer::add($this->timerInterval / 1000, function() use ($worker) {
+                $this->del();
+            });
+            // consume timer
+            self::setMainTimer(Timer::add($this->timerInterval / 1000, function () use ($worker) {
                 $this->consume($worker);
             }));
         }
@@ -62,6 +68,9 @@ class QueueBuilder extends AbstractBuilder
         }
         if(self::getMainTimer()) {
             Timer::del(self::getMainTimer());
+        }
+        if(self::$_delTimer) {
+            Timer::del(self::$_delTimer);
         }
     }
 

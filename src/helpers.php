@@ -6,37 +6,20 @@ use RedisException;
 use SplFileInfo;
 use Webman\Config;
 use Workbunny\WebmanRqueue\Builders\AbstractBuilder;
+use Workbunny\WebmanRqueue\Builders\QueueBuilder;
 use Workbunny\WebmanRqueue\Exceptions\WebmanRqueueException;
 
 /**
  * 同步生产
-/**
- * @param FastBuilder $builder
+ * @param QueueBuilder $builder
  * @param string $body
- * @param array $header = [
- *  @see Header
- * ]
+ * @param array $headers
  * @return bool
  * @throws RedisException
  */
-function sync_publish(FastBuilder $builder, string $body, array $header = []) : bool
+function sync_publish(QueueBuilder $builder, string $body, array $headers = []) : bool
 {
-    $client = $builder->connection()->client();
-    $header = new Header($header);
-    if(
-        ($header->_delay and !$builder->getMessage()->isDelayed()) or
-        (!$header->_delay and $builder->getMessage()->isDelayed())
-    ){
-        throw new WebmanRqueueException('Invalid publish. ');
-    }
-    if($client->xLen($queue = $builder->getMessage()->getQueue()) >= $builder->getMessage()->getQueueSize()){
-        return false;
-    }
-    $client->xAdd($queue,'*', [
-        '_header' => $header->toArray(),
-        '_body'   => $body,
-    ]);
-    return true;
+    return $builder->publish($body, $headers);
 }
 
 /**

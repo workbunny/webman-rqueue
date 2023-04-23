@@ -9,15 +9,39 @@ class Header
     public ?string $_error = null;
     public ?bool $_delete = true;
 
-    public function __construct(array $header = [])
+    public function __construct(array $headers = [])
     {
-        foreach ($header as $key => $value) {
+        $this->init($headers);
+    }
+
+    /**
+     * @param array $headers
+     * @return $this
+     */
+    public function init(array $headers): static
+    {
+
+        foreach ($headers as $key => $value) {
             if(\property_exists($this, $key)) {
                 try {
                     $this->$key = $value;
                 }catch (\Throwable $throwable){}
             }
         }
+        return $this;
+    }
+
+    /**
+     * @return $this
+     */
+    public function clean(): static
+    {
+        $this->_count     = 0;
+        $this->_delay     = 0;
+        $this->_delete    = true;
+        $this->_error     = null;
+        $this->_timestamp = 0.0;
+        return $this;
     }
 
     /**

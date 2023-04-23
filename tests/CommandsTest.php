@@ -1,0 +1,157 @@
+<?php declare(strict_types=1);
+
+namespace Workbunny\Tests;
+
+use PHPUnit\Framework\TestCase;
+use Workbunny\WebmanRqueue\Builders\AbstractBuilder;
+use Workbunny\WebmanRqueue\Commands\AbstractCommand;
+
+/**
+ * @runTestsInSeparateProcesses
+ */
+final class CommandsTest extends TestCase
+{
+    protected function exec(string $command): array
+    {
+        exec($command, $output, $resultCode);
+        return [$output, $resultCode];
+    }
+
+    protected function fileIsset(string $name, bool $delayed): bool
+    {
+        list(, , $file) = AbstractCommand::getFileInfo($name, $delayed);
+        return file_exists($file);
+    }
+
+    protected function setUp(): void
+    {
+        AbstractBuilder::$debug = true;
+        parent::setUp();
+    }
+
+    /**
+     * @testdox 测试Builder的创建和移除
+     * @return void
+     */
+    public function testBuilderNormal(): void
+    {
+        $name = 'test';
+        // create
+        $this->assertFalse($this->fileIsset($name, false));
+        list($result, $status) = $this->exec("php bin/command workbunny:rqueue-builder $name");
+        $this->assertEquals(0, $status);
+        $this->assertEquals([
+            "ℹ️ Run in debug mode!" ,
+            "ℹ️ Config updated." ,
+            "ℹ️ Builder created." ,
+            "✅ Builder TestBuilder created successfully."
+        ], $result);
+        $this->assertTrue($this->fileIsset($name, false));
+        // remove
+        $this->assertTrue($this->fileIsset($name, false));
+        list($result, $status) = $this->exec("php bin/command workbunny:rqueue-remove $name");
+        $this->assertEquals(0, $status);
+        $this->assertEquals([
+            "ℹ️ Run in debug mode!" ,
+            "ℹ️ Config updated." ,
+            "ℹ️ Builder removed." ,
+            "✅ Builder TestBuilder removed successfully."
+        ], $result);
+        $this->assertFalse($this->fileIsset($name, false));
+    }
+
+    /**
+     * @testdox 测试多层级Builder的创建和移除
+     * @return void
+     */
+    public function testBuilderMultilevel()
+    {
+        $name = 'test/test';
+        // create
+        $this->assertFalse($this->fileIsset($name, false));
+        list($result, $status) = $this->exec("php bin/command workbunny:rqueue-builder $name");
+        $this->assertEquals(0, $status);
+        $this->assertEquals([
+            "ℹ️ Run in debug mode!" ,
+            "ℹ️ Config updated." ,
+            "ℹ️ Builder created." ,
+            "✅ Builder TestBuilder created successfully."
+        ], $result);
+        $this->assertTrue($this->fileIsset($name, false));
+        // remove
+        $this->assertTrue($this->fileIsset($name, false));
+        list($result, $status) = $this->exec("php bin/command workbunny:rqueue-remove $name");
+        $this->assertEquals(0, $status);
+        $this->assertEquals([
+            "ℹ️ Run in debug mode!" ,
+            "ℹ️ Config updated." ,
+            "ℹ️ Builder removed." ,
+            "ℹ️ Empty dir removed.",
+            "✅ Builder TestBuilder removed successfully."
+        ], $result);
+        $this->assertFalse($this->fileIsset($name, false));
+    }
+
+    /**
+     * @testdox 测试DelayedBuilder的创建和移除
+     * @return void
+     */
+    public function testDelayedBuilder()
+    {
+        $name = 'test';
+        // create
+        $this->assertFalse($this->fileIsset($name, true));
+        list($result, $status) = $this->exec("php bin/command workbunny:rqueue-builder $name -d");
+        $this->assertEquals(0, $status);
+        $this->assertEquals([
+            "ℹ️ Run in debug mode!" ,
+            "ℹ️ Config updated." ,
+            "ℹ️ Builder created." ,
+            "✅ Builder TestBuilderDelayed created successfully."
+        ], $result);
+        $this->assertTrue($this->fileIsset($name, true));
+        // remove
+        $this->assertTrue($this->fileIsset($name, true));
+        list($result, $status) = $this->exec("php bin/command workbunny:rqueue-remove $name -d");
+        $this->assertEquals(0, $status);
+        $this->assertEquals([
+            "ℹ️ Run in debug mode!" ,
+            "ℹ️ Config updated." ,
+            "ℹ️ Builder removed." ,
+            "✅ Builder TestBuilderDelayed removed successfully."
+        ], $result);
+        $this->assertFalse($this->fileIsset($name, true));
+    }
+
+    /**
+     * @testdox 测试多层级DelayedBuilder的创建和移除
+     * @return void
+     */
+    public function testDelayedBuilderMultilevel()
+    {
+        $name = 'test/test';
+        // create
+        $this->assertFalse($this->fileIsset($name, true));
+        list($result, $status) = $this->exec("php bin/command workbunny:rqueue-builder $name -d");
+        $this->assertEquals(0, $status);
+        $this->assertEquals([
+            "ℹ️ Run in debug mode!" ,
+            "ℹ️ Config updated." ,
+            "ℹ️ Builder created." ,
+            "✅ Builder TestBuilderDelayed created successfully."
+        ], $result);
+        $this->assertTrue($this->fileIsset($name, true));
+        // remove
+        $this->assertTrue($this->fileIsset($name, true));
+        list($result, $status) = $this->exec("php bin/command workbunny:rqueue-remove $name -d");
+        $this->assertEquals(0, $status);
+        $this->assertEquals([
+            "ℹ️ Run in debug mode!" ,
+            "ℹ️ Config updated." ,
+            "ℹ️ Builder removed." ,
+            "ℹ️ Empty dir removed.",
+            "✅ Builder TestBuilderDelayed removed successfully."
+        ], $result);
+        $this->assertFalse($this->fileIsset($name, true));
+    }
+}

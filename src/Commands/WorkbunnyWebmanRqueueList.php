@@ -10,6 +10,8 @@ use SplFileInfo;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use function Workbunny\WebmanRqueue\base_path;
+use function Workbunny\WebmanRqueue\config;
 
 class WorkbunnyWebmanRqueueList extends AbstractCommand
 {
@@ -23,9 +25,9 @@ class WorkbunnyWebmanRqueueList extends AbstractCommand
      */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $headers = ['name', 'file', 'handler', 'count'];
+        $headers = ['name', 'file', 'handler', 'count', 'mode'];
         $rows = [];
-        $files = $this->files(base_path() . '/' . $this->baseProcessPath);
+        $files = $this->files(base_path() . '/' . self::$baseProcessPath);
         $configs = config('plugin.workbunny.webman-rqueue.process', []);
 
         /** @var SplFileInfo $file */
@@ -35,7 +37,7 @@ class WorkbunnyWebmanRqueueList extends AbstractCommand
                 '.',
                 str_replace(base_path() . '/' , '', $fileName = $file->getPath() . '/' . $file->getBasename('.php'))
             );
-            $name = str_replace(base_path() . '/' . $this->baseProcessPath , '', $fileName);
+            $name = str_replace(base_path() . '/' . self::$baseProcessPath . '/', '', $fileName);
             $rows[] = [
                 strtolower(
                     strpos($name, 'BuilderDelayed') ?
@@ -44,7 +46,8 @@ class WorkbunnyWebmanRqueueList extends AbstractCommand
                 ),
                 $file->getRealPath(),
                 $configs[$key]['handler'] ?? '--',
-                $configs[$key]['count'] ?? '--'
+                $configs[$key]['count'] ?? '--',
+                $configs[$key]['mode'] ?? '--'
             ];
         }
 

@@ -7,20 +7,24 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use function Workbunny\WebmanRqueue\is_empty_dir;
+use function Workbunny\WebmanRqueue\base_path;
+use function Workbunny\WebmanRqueue\config_path;
+use function Workbunny\WebmanRqueue\config;
 
 class WorkbunnyWebmanRqueueRemove extends AbstractCommand
 {
     protected static $defaultName        = 'workbunny:rqueue-remove';
-    protected static $defaultDescription = 'Remove a workbunny/webman-rqueue Builder. ';
+    protected static $defaultDescription = 'Remove a workbunny/webman-rqueue Builder.';
 
     /**
      * @return void
      */
-    protected function configure()
+    protected function configure(): void
     {
-        $this->addArgument('name', InputArgument::REQUIRED, 'builder name');
-        $this->addOption('delayed', 'd', InputOption::VALUE_NONE, 'Delayed mode');
-        $this->addOption('close', 'c', InputOption::VALUE_NONE, 'Close only');
+        $this->addArgument('name', InputArgument::REQUIRED, 'builder name.');
+        $this->addOption('delayed', 'd', InputOption::VALUE_NONE, 'Delayed mode.');
+        $this->addOption('close', 'c', InputOption::VALUE_NONE, 'Close only mode.');
     }
 
     /**
@@ -33,47 +37,33 @@ class WorkbunnyWebmanRqueueRemove extends AbstractCommand
         $name = $input->getArgument('name');
         $delayed = $input->getOption('delayed');
         $close = $input->getOption('close');
-
         list($name, $namespace, $file) = $this->getFileInfo($name, $delayed);
-
         $file = $close ? '' : $file;
-
-        $this->removeBuilder($name, $namespace, $file, $output);
-
-        return self::SUCCESS;
-    }
-
-    /**
-     * @param string $name
-     * @param string $namespace
-     * @param string $file
-     * @param OutputInterface $output
-     * @return void
-     */
-    protected function removeBuilder(string $name, string $namespace, string $file, OutputInterface $output)
-    {
-        if(file_exists($process = config_path() . '/plugin/workbunny/webman-rqueue/process.php')){
-            $processConfig = file_get_contents($process);
-            $config = config('plugin.workbunny.webman-rqueue.process', []);
-            $processName = str_replace('\\', '.', "$namespace\\$name");
-
-            // 清理配置文件
-            if(isset($config[$processName])){
-                file_put_contents($process, preg_replace_callback("/[\r\n|\n]    '$processName' => [[\s\S]*?],/",
+        if(!file_exists($process = config_path() . '/plugin/workbunny/webman-rqueue/process.php')) {
+            return $this->error($output, "Builder {$name} failed to clear: plugin/workbunny/webman-rqueue/process.php does not exist.");
+        }
+        // remove config
+        $config = config('plugin.workbunny.webman-rqueue.process', []);
+        $processName = \str_replace('\\', '.', "$namespace\\$name");
+        if(isset($config[$processName])){
+            if(\file_put_contents($process, \preg_replace_callback("/    '$processName' => [[\s\S]*?],\r\n/",
                         function () {
                             return '';
-                        }, $processConfig,1)
-                );
+                        }, \file_get_contents($process),1)
+                ) !== false) {
+                $this->info($output, "Config updated.");
             }
-            // 清理文件
-            if(file_exists($file)){
-                unlink($file);
-            }
-
-            $output->writeln("<info>Builder {$name} cleared successfully. </info>");
-            return;
         }
-        $output->writeln("<error>Builder {$name} failed to clear: plugin/workbunny/webman-rqueue/process.php does not exist. </error>");
+        // remove file
+        if(\file_exists($file)){
+            \unlink($file);
+            $this->info($output, "Builder removed.");
+        }
+        // remove empty dir
+        if(\dirname($file) !== base_path() . DIRECTORY_SEPARATOR . self::$baseProcessPath) {
+            is_empty_dir(\dirname($file), true);
+            $this->info($output, "Empty dir removed.");
+        }
+        return $this->success($output, "Builder $name removed successfully.");
     }
-
 }

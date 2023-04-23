@@ -15,8 +15,7 @@
     "source": "https://github.com/workbunny/webman-rqueue"
   },
   "require": {
-    "php": "^8.1",
-    "ext-redis": "*",
+    "php": "^8.0",
     "webman/console": "^1.0",
     "psr/container": "^1.0 | ^2.0",
     "illuminate/redis": "^10.0",
@@ -24,7 +23,8 @@
   },
   "require-dev": {
     "workerman/webman-framework": "^1.0",
-    "symfony/var-dumper": "^5.0"
+    "symfony/var-dumper": "^6.0",
+    "phpunit/phpunit": "^9.6"
   },
   "autoload": {
     "psr-4": {
@@ -32,11 +32,15 @@
     },
     "files": [
       "./src/helpers.php"
+    ],
+    "classmap": [
+      "src/"
     ]
   },
   "autoload-dev": {
     "psr-4": {
-      "Examples\\": "example"
+      "Workbunny\\Tests\\": "tests",
+      "process\\": "process"
     }
   }
 }

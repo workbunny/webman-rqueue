@@ -1,21 +1,58 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Workbunny\WebmanRqueue\Commands;
 
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Output\OutputInterface;
+use Workbunny\WebmanRqueue\Builders\GroupBuilder;
+use Workbunny\WebmanRqueue\Builders\QueueBuilder;
+use function Workbunny\WebmanRqueue\base_path;
 
 abstract class AbstractCommand extends Command
 {
-    protected string $baseProcessPath = 'process/workbunny/rqueue/';
-    protected string $baseNamespace = 'process\workbunny\rqueue';
+    public static string $baseProcessPath = 'process/workbunny/rqueue';
+    public static string $baseNamespace = 'process\workbunny\rqueue';
+
+    /**
+     * @var string[]
+     */
+    protected array $builderList = [
+        'queue' => QueueBuilder::class,
+        'group' => GroupBuilder::class
+    ];
+
+    /**
+     * @param string $name
+     * @return string|null
+     */
+    protected function getBuilder(string $name): ?string
+    {
+        return $this->builderList[$name] ?? null;
+    }
+
+    protected function info(OutputInterface $output, string $message): void
+    {
+        $output->writeln("ℹ️ $message");
+    }
+
+    protected function error(OutputInterface $output, string $message): int
+    {
+        $output->writeln("❌ $message");
+        return self::FAILURE;
+    }
+
+    protected function success(OutputInterface $output, string $message): int
+    {
+        $output->writeln("✅ $message");
+        return self::SUCCESS;
+    }
 
     /**
      * @param string $name
      * @param bool $isDelayed
      * @return string
      */
-    protected function getClassName(string $name, bool $isDelayed): string
+    public static function getClassName(string $name, bool $isDelayed): string
     {
         $class = preg_replace_callback('/:([a-zA-Z])/', function ($matches) {
                 return strtoupper($matches[1]);
@@ -28,16 +65,16 @@ abstract class AbstractCommand extends Command
      * @param bool $delayed
      * @return array = [$name, $namespace, $file]
      */
-    protected function getFileInfo(string $name, bool $delayed): array
+    public static function getFileInfo(string $name, bool $delayed): array
     {
         if (!($pos = strrpos($name, '/'))) {
-            $name = $this->getClassName($name, $delayed);
-            $file = "{$this->baseProcessPath}$name.php";
-            $namespace = $this->baseNamespace;
+            $name = self::getClassName($name, $delayed);
+            $file = base_path() . DIRECTORY_SEPARATOR . self::$baseProcessPath . "/$name.php";
+            $namespace = self::$baseNamespace;
         } else {
-            $path = $this->baseProcessPath . substr($name, 0, $pos);
-            $name = $this->getClassName(substr($name, $pos + 1), $delayed);
-            $file = "$path/$name.php";
+            $path = self::$baseProcessPath . '/' . substr($name, 0, $pos);
+            $name = self::getClassName(substr($name, $pos + 1), $delayed);
+            $file = base_path() . "/$path/$name.php";
             $namespace = str_replace('/', '\\', $path);
         }
         return [$name, $namespace, $file];
