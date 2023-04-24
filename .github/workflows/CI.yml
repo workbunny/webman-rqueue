@@ -23,8 +23,6 @@ jobs:
       - uses: supercharge/redis-github-action@1.5.0
         with:
           redis-version: ${{ matrix.redis }}
-          redis-container-name: redis
-          redis-port: 6379
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
