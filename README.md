@@ -57,16 +57,15 @@ composer require workbunny/webman-rqueue
 
 ## 使用
 
-### 创建Builder
+### QueueBuilder
 
-#### QueueBuilder 模式
+- 一个QueueBuilder类对应一个消费Group和一个消费逻辑 ```QueueBuilder::handler()```
+- 一个QueueBuilder可对应一个/多个Redis-Stream-Key，通过配置 ```QueueBuilder::$config['queues']```
+- QueueBuilder类使用定时器进行消费，每一次消费之后会根据消息的属性 ```_header['_delete']``` 来进行消息释放
 
-- 一个Builder对应一个Redis的Stream，类名与Queue挂钩；
-- Builder中的生产者和消费者都与当前Stream绑定，多个消费进程竞争消费Stream中的消息；
+#### 命令行
 
-
-##### 命令行创建
-
+- 创建
 ```shell
 # 创建一个拥有单进程消费者的QueueBuilder
 ./webman workbunny:rqueue-builder test --mode=queue
@@ -77,31 +76,54 @@ composer require workbunny/webman-rqueue
 ./webman workbunny:rqueue-builder test --delayed--mode=queue
 # 创建一个拥有4进程消费者的延迟QueueBuilder
 ./webman workbunny:rqueue-builder test 4 --delayed--mode=queue
-```
 
-##### 支持二级菜单
 
-```shell
 # 在 process/workbunny/rqueue 目录下创建 TestBuilder.php
 ./webman workbunny:rqueue-builder test --mode=queue
-
 # 在 process/workbunny/rqueue/project 目录下创建 TestBuilder.php
 ./webman workbunny:rqueue-builder project/test --mode=queue
-
 # 在 process/workbunny/rqueue/project 目录下创建 TestAllBuilder.php
 ./webman workbunny:rqueue-builder project/testAll --mode=queue
-
 # 延迟同理
 ```
 
-#### GroupBuilder 模式
 
-- 多个Builder对应一个Redis的Stream，类名与Group挂钩；
-- 可创建多个Builder
-- Builder中的生产者和消费者都与当前Stream绑定，多个消费进程竞争消费Stream中的消息；
+- 移除
 
-##### 命令行创建
+移除包含了类文件的移除和配置的移除
 
+```shell
+# 移除Builder
+./webman workbunny:rqueue-remove test --mode=queue
+# 移除延迟Builder
+./webman workbunny:rqueue-remove test --delayed--mode=queue
+
+# 二级菜单同理
+```
+
+- 关闭
+
+关闭仅对配置进行移除
+
+```shell
+# 关闭Builder
+./webman workbunny:rqueue-remove test --close--mode=queue
+# 关闭延迟Builder
+./webman workbunny:rqueue-remove test --close--delayed--mode=queue
+
+# 二级菜单同理
+```
+
+### GroupBuilder
+
+- 一个GroupBuilder类对应一个消费Group和一个消费逻辑 ```QueueBuilder::handler()```
+- 一个GroupBuilder可对应一个/多个Redis-Stream-Key，通过配置 ```QueueBuilder::$config['queues']```
+- GroupBuilder类使用定时器进行消费，使用定时器释放当前 Stream-Key 上**所有Group收取过的闲置消息**
+- 可以使用多个GroupBuilder类配置相同的 ```QueueBuilder::$config['queues']```，从而达到一条/多条队列由不同的消费逻辑进行处理
+
+#### 命令行
+
+- 创建
 ```shell
 # 创建一个拥有单进程消费者的GroupBuilder
 ./webman workbunny:rqueue-builder test --mode=group
@@ -112,78 +134,58 @@ composer require workbunny/webman-rqueue
 ./webman workbunny:rqueue-builder test --delayed--mode=group
 # 创建一个拥有4进程消费者的延迟GroupBuilder
 ./webman workbunny:rqueue-builder test 4 --delayed--mode=group
-```
 
-##### 支持二级菜单
-```shell
+# 二级菜单
+
 # 在 process/workbunny/rqueue 目录下创建 TestBuilder.php
 ./webman workbunny:rqueue-builder test --mode=group
-
 # 在 process/workbunny/rqueue/project 目录下创建 TestBuilder.php
 ./webman workbunny:rqueue-builder project/test --mode=group
-
 # 在 process/workbunny/rqueue/project 目录下创建 TestAllBuilder.php
 ./webman workbunny:rqueue-builder project/testAll --mode=group
-
-# 延迟同理
 ```
 
+- 移除
 
-- **Builder文件结构入下，可自行调整类属性：**
-```php
-<?php
-declare(strict_types=1);
-
-namespace process\workbunny\rqueue;
-
-use Illuminate\Redis\Connections\Connection;
-use Workbunny\WebmanRqueue\FastBuilder;
-
-class TestBuilder extends FastBuilder
-{
-    // 默认的redis连接配置
-    protected string $connection = 'default';
-    // 消费组QOS
-    protected int $prefetch_count = 1;
-    // 队列最大数量
-    protected int $queue_size = 4096;
-    // 是否延迟队列
-    protected bool $delayed = false;
-    // 消费回调
-    public function handler(string $msgid, array $msgvalue, Connection $connection): bool
-    {
-    	var_dump($msgid); # 消息id
-        var_dump($msgvalue); # 消息体
-        return true; // ack
-        # false // nack
-        # throw // nack
-    }
-}
-```
-
-### 移除Builder
-
-该命令会移除process.php中的配置及对应Builder文件；
-
-- **移除名为 test 的普通队列：（在项目根目录执行）**
+移除包含了类文件的移除和配置的移除
 
 ```shell
-./webman workbunny:rqueue-remove test
+# 移除Builder
+./webman workbunny:rqueue-remove test --mode=group
+# 移除延迟Builder
+./webman workbunny:rqueue-remove test --delayed--mode=group
+
+# 二级菜单同理
 ```
 
-- **移除名为 test 的延迟队列：（在项目根目录执行）**
+- 关闭
+
+关闭仅对配置进行移除
+
 ```shell
-./webman workbunny:rqueue-remove test -d
-# 或
-./webman workbunny:rqueue-remove test --delayed
+# 关闭Builder
+./webman workbunny:rqueue-remove test --close--mode=group
+# 关闭延迟Builder
+./webman workbunny:rqueue-remove test --close--delayed--mode=group
+
+# 二级菜单同理
 ```
 
-- **关闭名为 test 的普通队列：（在项目根目录执行）**
+
+### 注意
+
+- **QueueBuilder与GroupBuilder在命令行自动生成时没有做类似Delayed的区分，用户可自行进行命名区分，如：**
+
 ```shell
-./webman workbunny:rqueue-remove test -c
-# 或
-./webman workbunny:rqueue-remove test --close
+# 创建一个GroupBuilder
+./webman workbunny:rqueue-builder testGroup --mode=group
+# 创建一个QueueBuilder
+./webman workbunny:rqueue-builder testQueue --mode=queue
 ```
+
+- **创建的Builder类可以手动修改调整**
+
+- **为Builder添加进process.php的配置可以手动修改**
 
 ### 查看Builder
 
@@ -194,45 +196,54 @@ class TestBuilder extends FastBuilder
 **注：当 Builder 未启动时，handler 与 count 显示为 --**
 
 ```shell
-+----------+-----------------------------------------------------------------------+-------------------------------------------------+-------+
-| name     | file                                                                  | handler                                         | count |
-+----------+-----------------------------------------------------------------------+-------------------------------------------------+-------+
-| test     | /var/www/your-project/process/workbunny/rqueue/TestBuilder.php        | process\workbunny\rqueue\TestBuilder            | 1     |
-| test -d  | /var/www/your-project/process/workbunny/rqueue/TestBuilderDelayed.php | process\workbunny\rqueue\TestBuilderDelayed     | 1     |
-+----------+-----------------------------------------------------------------------+-------------------------------------------------+-------+
++----------+-----------------------------------------------------------------------+-------------------------------------------------+-------+-------+
+| name     | file                                                                  | handler                                         | count | mode  |
++----------+-----------------------------------------------------------------------+-------------------------------------------------+-------+-------+
+| test     | /var/www/your-project/process/workbunny/rqueue/TestBuilder.php        | process\workbunny\rqueue\TestBuilder            | 1     | queue |
+| test -d  | /var/www/your-project/process/workbunny/rqueue/TestBuilderDelayed.php | process\workbunny\rqueue\TestBuilderDelayed     | 1     | group |
++----------+-----------------------------------------------------------------------+-------------------------------------------------+-------+-------+
 ```
 
 ### 生产
 
-- 每个 Builder 各包含一个连接，使用多个 Builder 会创建多个连接
-
-- 生产消息默认不关闭当前连接
-
-#### 1. 同步发布消息
-
-**该方法会阻塞等待至消息生产成功，返回bool**
-
-- 发布普通消息
+#### 发布普通消息
 
 **注：向普通队列发布延迟消息会抛出一个 WebmanRqueueException 异常**
 
 ```php
-use function Workbunny\WebmanRabbitMQ\sync_publish;
+use function Workbunny\WebmanRqueue\sync_publish;
 use process\workbunny\rqueue\TestBuilder;
 
-sync_publish(TestBuilder::instance(), 'abc'); # return bool
+# 使用函数发布
+/** headers参数详见 @link Header */
+sync_publish(TestBuilder::instance(), 'abc', [
+	'_delete' => false
+]);
+
+# 使用对象发布
+/** headers参数详见 @link Header */
+TestBuilder::instance()->publish('abc', [
+	'_delete' => false
+]);
 ```
 
-- 发布延迟消息
+#### 发布延迟消息
 
 **注：向延迟队列发布普通消息会抛出一个 WebmanRqueueException 异常**
 
 ```php
-use function Workbunny\WebmanRabbitMQ\sync_publish;
+use function Workbunny\WebmanRqueue\sync_publish;
 use process\workbunny\rqueue\TestBuilder;
 
-# 延迟10秒
-sync_publish(TestBuilder::instance(), 'abc', 10000); # return bool
+# 延迟10ms
+sync_publish(TestBuilder::instance(), 'abc', [
+	'_delay' => 10
+]);
+
+# 延迟10ms
+TestBuilder::instance()->publish('abc', [
+	'_delay' => 10
+]);
 ```
 
 ## 说明
@@ -243,6 +254,3 @@ sync_publish(TestBuilder::instance(), 'abc', 10000); # return bool
 
 - **Redis Stream** 的持久化依赖 **Redis** 本身的持久化策略，在一定情况下 **Redis Stream** 也并非是可靠型的消息队列;关于持久化相关内容，请仔细阅读 **[Redis中文文档](http://www.redis.cn/topics/persistence.html)**；
 
-- 继承实现 **AbstractMessage** 可以自定义Message；
-
-- **Builder** 可通过 **Builder->setMessage()** 可设置自定义配置；
