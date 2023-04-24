@@ -10,7 +10,7 @@ function config(string $key = null, $default = null): mixed
 {
     return [
         'default' => [
-            'host'     => 'redis',
+            'host'     => '172.17.0.1',//'redis',
             'password' => '',
             'port'     => 6379,
             'database' => 0,
