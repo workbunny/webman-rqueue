@@ -104,6 +104,11 @@ abstract class AbstractBuilder
         self::$_mainTimer = $mainTimer;
     }
 
+    public static function getName(): string
+    {
+        return str_replace('\\', ':', get_called_class());
+    }
+
     /**
      * @return Headers|null
      */

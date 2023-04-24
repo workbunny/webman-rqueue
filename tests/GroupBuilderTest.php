@@ -29,21 +29,30 @@ final class GroupBuilderTest extends BaseTestCase
         return hrtime(true) . '-' . rand(100, 999);
     }
 
-    protected function get(GroupBuilder $builder, string $id): bool|array|Redis
+    protected function get(GroupBuilder $builder, string $id): array
     {
         try {
             $client = $builder->getConnection()->client();
-            return $client->xRange($builder->getBuilderConfig()->getQueue(), $id, $id);
+            $result = [];
+            foreach ($builder->getBuilderConfig()->getQueues() as $queue) {
+                $result[$queue] = $client->xRange($queue, $id, $id);
+            }
+            return $result;
         }catch (RedisException $exception) {
             return [];
         }
     }
 
-    protected function del(GroupBuilder $builder, array $ids): bool|int|Redis
+    protected function del(GroupBuilder $builder, array $ids): int|false
     {
         try {
             $client = $builder->getConnection()->client();
-            return $client->xDel($builder->getBuilderConfig()->getQueue(), $ids);
+            $count = 0;
+            foreach ($builder->getBuilderConfig()->getQueues() as $queue) {
+                $client->xDel($queue, $ids);
+                $count ++;
+            }
+            return $count;
         }catch (RedisException $exception) {
             return false;
         }
@@ -59,16 +68,17 @@ final class GroupBuilderTest extends BaseTestCase
         $result = sync_publish($this->_builder, 'test', [
             '_id' => $id = $this->id()
         ]);
-        $this->assertTrue($result);
+        $this->assertNotFalse($result);
         // xrange
         $result = $this->get($this->_builder, $id);
         // verify
-        $this->assertTrue(isset($result[$id]));
-//        $this->assertArrayHasKey($id, $result);
-        $this->assertEquals('test', $result[$id]['_body']);
-        $this->assertContainsEquals([
-            '_id' => $id
-        ], (new Headers($result[$id]['_header']))->toArray());
+        foreach ($this->_builder->getBuilderConfig()->getQueues() as $queue) {
+            $this->assertArrayHasKey($id, $result[$queue]);
+            $this->assertEquals('test', $result[$queue][$id]['_body']);
+            $this->assertContainsEquals([
+                '_id' => $id
+            ], (new Headers($result[$queue][$id]['_header']))->toArray());
+        }
         // del
         $this->del($this->_builder, array_keys($result));
 
@@ -76,16 +86,17 @@ final class GroupBuilderTest extends BaseTestCase
         $result = sync_publish($this->_builderDelayed, 'test', [
             '_id' => $id = $this->id()
         ]);
-        $this->assertTrue($result);
+        $this->assertNotFalse($result);
         // xrange
         $result = $this->get($this->_builderDelayed, $id);
         // verify
-        $this->assertTrue(isset($result[$id]));
-//        $this->assertArrayHasKey($id, $result);
-        $this->assertEquals('test', $result[$id]['_body']);
-        $this->assertContainsEquals([
-            '_id' => $id
-        ], (new Headers($result[$id]['_header']))->toArray());
+        foreach ($this->_builderDelayed->getBuilderConfig()->getQueues() as $queue) {
+            $this->assertArrayHasKey($id, $result[$queue]);
+            $this->assertEquals('test', $result[$queue][$id]['_body']);
+            $this->assertContainsEquals([
+                '_id' => $id
+            ], (new Headers($result[$queue][$id]['_header']))->toArray());
+        }
         // del
         $this->del($this->_builderDelayed, array_keys($result));
     }
@@ -100,15 +111,17 @@ final class GroupBuilderTest extends BaseTestCase
         $result = $this->_builder->publish('test', [
             '_id' => $id = $this->id()
         ]);
-        $this->assertTrue($result);
+        $this->assertNotFalse($result);
         // xrange
         $result = $this->get($this->_builder, $id);
-        $this->assertTrue(isset($result[$id]));
-//        $this->assertArrayHasKey($id, $result);
-        $this->assertEquals('test', $result[$id]['_body']);
-        $this->assertContainsEquals([
-            '_id' => $id
-        ], (new Headers($result[$id]['_header']))->toArray());
+        // verify
+        foreach ($this->_builder->getBuilderConfig()->getQueues() as $queue) {
+            $this->assertArrayHasKey($id, $result[$queue]);
+            $this->assertEquals('test', $result[$queue][$id]['_body']);
+            $this->assertContainsEquals([
+                '_id' => $id
+            ], (new Headers($result[$queue][$id]['_header']))->toArray());
+        }
         // del
         $this->del($this->_builder, array_keys($result));
 
@@ -116,16 +129,17 @@ final class GroupBuilderTest extends BaseTestCase
         $result = $this->_builderDelayed->publish( 'test', [
             '_id' => $id = $this->id()
         ]);
-        $this->assertTrue($result);
+        $this->assertNotFalse($result);
         // xrange
         $result = $this->get($this->_builderDelayed, $id);
         // verify
-        $this->assertTrue(isset($result[$id]));
-//        $this->assertArrayHasKey($id, $result);
-        $this->assertEquals('test', $result[$id]['_body']);
-        $this->assertContainsEquals([
-            '_id' => $id
-        ], (new Headers($result[$id]['_header']))->toArray());
+        foreach ($this->_builderDelayed->getBuilderConfig()->getQueues() as $queue) {
+            $this->assertArrayHasKey($id, $result[$queue]);
+            $this->assertEquals('test', $result[$queue][$id]['_body']);
+            $this->assertContainsEquals([
+                '_id' => $id
+            ], (new Headers($result[$queue][$id]['_header']))->toArray());
+        }
         // del
         $this->del($this->_builderDelayed, array_keys($result));
     }

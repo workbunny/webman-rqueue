@@ -16,7 +16,7 @@ class QueueBuilder extends AbstractBuilder
      * 配置
      *
      * @var array = [
-     *  'queue'          => 'example',
+     *  'queues'         => ['example'],
      *  'group'          => 'example',
      *  'delayed'        => false,
      *  'prefetch_count' => 1,
@@ -28,9 +28,9 @@ class QueueBuilder extends AbstractBuilder
     public function __construct()
     {
         parent::__construct();
-        $name = str_replace('\\', '.', get_called_class());
+        $name = self::getName();
         $this->getBuilderConfig()->setGroup($this->config['group'] ?? $name);
-        $this->getBuilderConfig()->setQueue($this->config['queue'] ?? $name);
+        $this->getBuilderConfig()->setQueues($this->config['queues'] ?? [$name]);
         $this->getBuilderConfig()->setQueueSize($this->config['queue_size'] ?? 0);
         $this->getBuilderConfig()->setPrefetchCount($this->config['prefetch_count'] ?? 0);
         $this->getBuilderConfig()->setDelayed($this->config['delayed'] ?? false);
@@ -41,11 +41,11 @@ class QueueBuilder extends AbstractBuilder
     public function onWorkerStart(Worker $worker): void
     {
         if($this->getConnection()){
-            // check pending
-
-            // consume
+            // main timer
             self::setMainTimer(Timer::add($this->timerInterval / 1000, function () use($worker) {
+                // consume
                 $this->consume($worker);
+                // todo check pending
             }));
         }
     }
@@ -86,6 +86,7 @@ class QueueBuilder extends AbstractBuilder
     public static function classContent(string $namespace, string $className, bool $isDelay): string
     {
         $isDelay = $isDelay ? 'true' : 'false';
+        $name = self::getName();
         return <<<doc
 <?php declare(strict_types=1);
 
@@ -99,11 +100,16 @@ class $className extends QueueBuilder
     
     /** @see QueueBuilder::\$config */
     protected array \$configs = [
-        'queue'          => '',          // TODO 队列名称 ，默认由类名自动生成
-        'group'          => '',          // TODO 分组名称，默认由类名自动生成
-        'delayed'        => $isDelay,    // TODO 是否延迟
-        'prefetch_count' => 0,           // TODO QOS 数量
-        'queue_size'     => 0,           // TODO Queue size
+        // 默认由类名自动生成
+        'queues'         => [ $name ],
+        // 默认由类名自动生成        
+        'group'          => $name, 
+        // 是否延迟         
+        'delayed'        => $isDelay,
+        // QOS    
+        'prefetch_count' => 0,
+        // Queue size
+        'queue_size'     => 0,           
     ];
     
     /** @var float|null 消费间隔 1ms */

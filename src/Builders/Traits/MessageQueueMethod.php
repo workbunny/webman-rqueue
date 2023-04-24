@@ -10,45 +10,65 @@ use Workerman\Worker;
 trait MessageQueueMethod
 {
     /**
+     * @param string|null $queueName
      * @return array
      * @throws RedisException
      */
-    public function getQueueFullInfo(): array
+    public function getQueueFullInfo(null|string $queueName = null): array
     {
-        $queueName = $this->getBuilderConfig()->getQueue();
-        return $this->getConnection()->client()->rawCommand('XINFO', 'STREAM', $queueName, 'FULL');
+        $queues = $queueName ? [$queueName] : $this->getBuilderConfig()->getQueues();
+        $result = [];
+        foreach ($queues as $queue) {
+            $result[$queue] = $this->getConnection()->client()->rawCommand('XINFO', 'STREAM', $queueName, 'FULL');
+        }
+        return $result;
     }
 
     /**
+     * @param string|null $queueName
      * @return array
      * @throws RedisException
      */
-    public function getQueueInfo(): array
+    public function getQueueInfo(null|string $queueName = null): array
     {
-        $queueName = $this->getBuilderConfig()->getQueue();
-        return $this->getConnection()->client()->xInfo('STREAM', $queueName);
+        $queues = $queueName ? [$queueName] : $this->getBuilderConfig()->getQueues();
+        $result = [];
+        foreach ($queues as $queue) {
+            $result[$queue] = $this->getConnection()->client()->xInfo('STREAM', $queueName);
+        }
+        return $result;
     }
 
     /**
+     * @param string|null $queueName
      * @return array
      * @throws RedisException
      */
-    public function getQueueConsumersInfo(): array
+    public function getQueueConsumersInfo(null|string $queueName = null): array
     {
-        $queueName = $this->getBuilderConfig()->getQueue();
         $groupName = $this->getBuilderConfig()->getGroup();
-        return $this->getConnection()->client()->xInfo('CONSUMERS', $queueName, $groupName);
+        $queues = $queueName ? [$queueName] : $this->getBuilderConfig()->getQueues();
+        $result = [];
+        foreach ($queues as $queue) {
+            $result[$queue] = $this->getConnection()->client()->xInfo('CONSUMERS', $queueName, $groupName);
+        }
+        return $result;
     }
 
     /**
+     * @param string|null $queueName
      * @return array
      * @throws RedisException
      */
-    public function getQueueGroupsInfo(): array
+    public function getQueueGroupsInfo(null|string $queueName = null): array
     {
-        $queueName = $this->getBuilderConfig()->getQueue();
         $groupName = $this->getBuilderConfig()->getGroup();
-        return $this->getConnection()->client()->xInfo('GROUPS', $queueName, $groupName);
+        $queues = $queueName ? [$queueName] : $this->getBuilderConfig()->getQueues();
+        $result = [];
+        foreach ($queues as $queue) {
+            $result[$queue] = $this->getConnection()->client()->xInfo('GROUPS', $queueName, $groupName);
+        }
+        return $result;
     }
 
     /**
@@ -58,18 +78,19 @@ trait MessageQueueMethod
     public function del(): void
     {
         if($groups = $this->getQueueGroupsInfo() and $info = $this->getQueueInfo()) {
-            $firstId = array_keys($info['first-entry'])[0];
-            $lastDeliveredId = $groups['last-delivered-id'];
-            $queueName = $this->getBuilderConfig()->getQueue();
+            $queues = $this->getBuilderConfig()->getQueues();
             $client = $this->getConnection()->client();
-            $result = $client->xRange($queueName, $firstId, $lastDeliveredId, 100);
-            foreach ($result as $id => $value) {
-                if($id !== $lastDeliveredId) {
-                    $client->xDel($queueName, [$id]);
+            foreach ($queues as $queue) {
+                $firstId = array_keys($info[$queue]['first-entry'])[0];
+                $lastDeliveredId = $groups[$queue]['last-delivered-id'];
+                $result = $client->xRange($queue, $firstId, $lastDeliveredId, 100);
+                foreach ($result as $id => $value) {
+                    if($id !== $lastDeliveredId) {
+                        $client->xDel($queue, [$id]);
+                    }
                 }
             }
         }
-
     }
 
     /**
@@ -77,10 +98,10 @@ trait MessageQueueMethod
      * @param array $headers = [
      *  @see Headers
      * ]
-     * @return bool
-     * @throws WebmanRqueueException
+     * @param string|null $queueName
+     * @return int|false
      */
-    public function publish(string $body, array $headers = []): bool
+    public function publish(string $body, array $headers = [], null|string $queueName = null): int|false
     {
         $client = $this->getConnection()->client();
         $header = new Headers($headers);
@@ -88,21 +109,32 @@ trait MessageQueueMethod
             ($header->_delay and !$this->getBuilderConfig()->isDelayed()) or
             (!$header->_delay and $this->getBuilderConfig()->isDelayed())
         ){
-            throw new WebmanRqueueException('Invalid publish. ');
+            throw new WebmanRqueueException('Invalid publish.');
         }
-        $queue = $this->getBuilderConfig()->getQueue();
+        $queues = $this->getBuilderConfig()->getQueues();
         $queueSize = $this->getBuilderConfig()->getQueueSize();
+        if($queueName !== null and !isset($queues[$queueName])) {
+            throw new WebmanRqueueException('Invalid queue name.');
+        }
+        $queues = $queueName ? [$queueName] : $queues;
+        $count = 0;
         try {
-            if($queueSize > 0) {
-                $queueLen = $client->xLen($queue);
-                if($queueLen >= $queueSize){
+            foreach ($queues as $queue) {
+                if($queueSize > 0) {
+                    $queueLen = $client->xLen($queue);
+                    if($queueLen >= $queueSize){
+                        throw new WebmanRqueueException('Queue size exceeded.');
+                    }
+                }
+                if(!$client->xAdd($queue, (string)$header->_id, [
+                    '_header' => $header->toString(),
+                    '_body'   => $body,
+                ])) {
                     return false;
                 }
+                $count ++;
             }
-            return (bool) $client->xAdd($queue, (string)$header->_id, [
-                '_header' => $header->toString(),
-                '_body'   => $body,
-            ]);
+            return $count;
         }catch (RedisException $exception) {
             throw new WebmanRqueueException($exception->getMessage(), $exception->getCode(), $exception);
         }
@@ -119,56 +151,62 @@ trait MessageQueueMethod
         try {
             $client = $this->getConnection()->client();
             $builderConfig = $this->getBuilderConfig();
-            $queueName = $builderConfig->getQueue();
+            $queues = $builderConfig->getQueues();
             $groupName = $builderConfig->getGroup();
             $consumerName = "$groupName-$worker->id";
             // create group
-            $client->xGroup('CREATE', $queueName, $groupName,'0', true);
+            $queueStreams = [];
+            foreach ($queues as $queueName) {
+                $client->xGroup('CREATE', $queueName, $groupName,'0', true);
+                $queueStreams[$queueName] = '>';
+            }
             // group read
             if($res = $client->xReadGroup(
-                $groupName, $consumerName, [$queueName => '>'], $builderConfig->getPrefetchCount(),
+                $groupName, $consumerName, $queueStreams, $builderConfig->getPrefetchCount(),
                 $this->timerInterval >= 1 ? $this->timerInterval : null
             )) {
-                $ids = [];
-                // messages
-                foreach ($res[$queueName] ?? [] as $id => $message){
-                    // drop
-                    if(!isset($message['_header']) or !isset($message['_body'])) {
-                        $client->xAck($queueName, $groupName, $this->idsAdd($ids, $id));
-                        continue;
-                    }
-                    $header = new Headers($message['_header']);
-                    $body = $message['_body'];
-                    // delay message
-                    if(
-                        $this->getBuilderConfig()->isDelayed() and $header->_delay > 0 and
-                        (($header->_delay / 1000 + $header->_timestamp) - microtime(true)) > 0
-                    ){
-                        // republish
-                        $header->_id = '*';
-                        $this->publish($body, $header->toArray());
-                        $client->xAck($queueName, $groupName, $this->idsAdd($ids, $id));
-                        continue;
-                    }
-                    try {
-                        // handler
-                        if(!\call_user_func($this->getBuilderConfig()->getCallback(), $id, $message, $this->getConnection())) {
-                            // false to republish
+                foreach ($res as $queueName => $item) {
+                    $ids = [];
+                    // messages
+                    foreach ($item as $id => $message){
+                        // drop
+                        if(!isset($message['_header']) or !isset($message['_body'])) {
+                            $client->xAck($queueName, $groupName, $this->idsAdd($ids, $id));
+                            continue;
+                        }
+                        $header = new Headers($message['_header']);
+                        $body = $message['_body'];
+                        // delay message
+                        if(
+                            $this->getBuilderConfig()->isDelayed() and $header->_delay > 0 and
+                            (($header->_delay / 1000 + $header->_timestamp) - microtime(true)) > 0
+                        ){
+                            // republish
+                            $header->_id = '*';
+                            $this->publish($body, $header->toArray());
+                            $client->xAck($queueName, $groupName, $this->idsAdd($ids, $id));
+                            continue;
+                        }
+                        try {
+                            // handler
+                            if(!\call_user_func($this->getBuilderConfig()->getCallback(), $id, $message, $this->getConnection())) {
+                                // false to republish
+                                $header->_count = $header->_count + 1;
+                                $header->_id    = '*';
+                                $this->publish($body, $header->toArray());
+                            }
+                            $client->xAck($queueName, $groupName, $this->idsAdd($ids, $id));
+                        }catch (\Throwable $throwable) {
                             $header->_count = $header->_count + 1;
+                            $header->_error = $throwable->getMessage();
                             $header->_id    = '*';
                             $this->publish($body, $header->toArray());
+                            $client->xAck($queueName, $groupName, $this->idsAdd($ids, $id));
                         }
-                        $client->xAck($queueName, $groupName, $this->idsAdd($ids, $id));
-                    }catch (\Throwable $throwable) {
-                        $header->_count = $header->_count + 1;
-                        $header->_error = $throwable->getMessage();
-                        $header->_id    = '*';
-                        $this->publish($body, $header->toArray());
-                        $client->xAck($queueName, $groupName, $this->idsAdd($ids, $id));
                     }
+                    // del
+                    if($del) { $client->xDel($queueName, $ids); }
                 }
-                // del
-                if($del) { $client->xDel($queueName, $ids); }
             }
         }catch (RedisException $exception) {
             throw new WebmanRqueueException($exception->getMessage(), $exception->getCode(), $exception);

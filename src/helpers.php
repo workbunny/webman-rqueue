@@ -13,10 +13,10 @@ use Workbunny\WebmanRqueue\Exceptions\WebmanRqueueException;
  * @param QueueBuilder $builder
  * @param string $body
  * @param array $headers
- * @return bool
+ * @return int|false
  * @throws WebmanRqueueException
  */
-function sync_publish(AbstractBuilder $builder, string $body, array $headers = []) : bool
+function sync_publish(AbstractBuilder $builder, string $body, array $headers = []) : int|false
 {
     return $builder->publish($body, $headers);
 }

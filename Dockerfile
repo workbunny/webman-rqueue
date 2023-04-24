@@ -1,18 +1,8 @@
-FROM php:8.1-fpm-alpine
+FROM php:8.2-alpine
 
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories && \
-    apk add --no-cache  \
-    php-dom \
-    php-xml \
-    php-xmlwriter \
-    php-xmlreader \
-    php-tokenizer  \
-    composer &&  \
-    composer self-update && \
     curl -sSL https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions -o - | sh -s  \
-    sockets pcntl zip event ffi xdebug opcache && \
-    pecl install redis && \
-    docker-php-ext-enable redis
+    sockets pcntl zip ffi xdebug opcache redis @composer
 
 VOLUME /var/www
 WORKDIR /var/www

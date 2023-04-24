@@ -1,11 +1,10 @@
-version: "3"
+version: "3.1"
 services:
   webman-rqueue-php:
     restart: always
     container_name: webman-rqueue-php
     build:
       context: ./
-    image: webman-rqueue-php
     volumes:
       - ./:/var/www
     logging:

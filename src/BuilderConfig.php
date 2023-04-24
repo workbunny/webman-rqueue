@@ -4,7 +4,8 @@ namespace Workbunny\WebmanRqueue;
 
 class BuilderConfig
 {
-    protected string $_queue = '';
+    /** @var string[]  */
+    protected array $_queues = [''];
     protected string $_body = '';
     protected string $_group = '';
     protected int $_queueSize = 4096;
@@ -61,18 +62,15 @@ class BuilderConfig
         $this->_delayed = $delayed;
     }
 
-
-
-    public function getQueue(): string
+    public function getQueues(): array
     {
-        return $this->_queue;
+        return $this->_queues;
     }
 
-    public function setQueue(string $queue): void
+    public function setQueues(array $queues): void
     {
-        $this->_queue = $queue;
+        $this->_queues = $queues;
     }
-
 
     public function getBody(): string
     {

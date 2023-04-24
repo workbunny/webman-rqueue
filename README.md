@@ -6,7 +6,19 @@
 
 # A lightweight queue based on Redis Stream for webman plugin
 
-[![Latest Stable Version](https://badgen.net/packagist/v/workbunny/webman-rqueue/latest)](https://packagist.org/packages/workbunny/webman-rqueue) [![Total Downloads](https://badgen.net/packagist/dt/workbunny/webman-rqueue)](https://packagist.org/packages/workbunny/webman-rqueue) [![License](https://badgen.net/packagist/license/workbunny/webman-rqueue)](https://packagist.org/packages/workbunny/webman-rqueue) [![PHP Version Require](https://badgen.net/packagist/php/workbunny/webman-rqueue)](https://packagist.org/packages/workbunny/webman-rqueue)
+
+<div align="center">
+    <a href="https://github.com/workbunny/webman-rqueue/actions">
+        <img src="https://github.com/workbunny/webman-rqueue/actions/workflows/CI.yml/badge.svg" alt="Build Status">
+    </a>
+    <a href="https://github.com/workbunny/webman-rqueue/blob/main/composer.json">
+        <img alt="PHP Version Require" src="http://poser.pugx.org/workbunny/webman-rqueue/require/php">
+    </a>
+    <a href="https://github.com/workbunny/webman-rqueue/blob/main/LICENSE">
+        <img alt="GitHub license" src="http://poser.pugx.org/workbunny/webman-rqueue/license">
+    </a>
+
+</div>
 
 ## 常见问题
 
@@ -31,9 +43,9 @@
 
 ## 简介
 
-基于Redis Stream的轻量级队列；
-
-简单易用高效，可以轻易的实现master/worker的队列模式（一个队列多个消费者）；
+- 基于Redis Stream的轻量级队列；
+- Queue 模式：多个消费者竞争消费
+- Group 模式：多个消费组订阅消费
 
 支持延迟消息；
 
@@ -47,45 +59,75 @@ composer require workbunny/webman-rqueue
 
 ### 创建Builder
 
-**Builder** 可以理解为类似 **ORM** 的 **Model**，创建一个 **Builder** 就对应了一个队列；使用该 **Builder** 对象进行 **publish()** 时，会向该队列投放消息；创建多少个 **Builder** 就相当于创建了多少条队列；
+#### QueueBuilder 模式
 
-- **创建一个消费者进程数量为1的普通队列：（在项目根目录执行）**
+- 一个Builder对应一个Redis的Stream，类名与Queue挂钩；
+- Builder中的生产者和消费者都与当前Stream绑定，多个消费进程竞争消费Stream中的消息；
+
+
+##### 命令行创建
+
+```shell
+# 创建一个拥有单进程消费者的QueueBuilder
+./webman workbunny:rqueue-builder test --mode=queue
+# 创建一个拥有4进程消费者的QueueBuilder
+./webman workbunny:rqueue-builder test 4 --mode=queue
+
+# 创建一个拥有单进程消费者的延迟QueueBuilder
+./webman workbunny:rqueue-builder test --delayed--mode=queue
+# 创建一个拥有4进程消费者的延迟QueueBuilder
+./webman workbunny:rqueue-builder test 4 --delayed--mode=queue
+```
+
+##### 支持二级菜单
 
 ```shell
 # 在 process/workbunny/rqueue 目录下创建 TestBuilder.php
-./webman workbunny:rqueue-builder test 1
-```
+./webman workbunny:rqueue-builder test --mode=queue
 
-- **创建一个消费者进程数量为1的延迟队列：（在项目根目录执行）**
-```shell
-# 在 process/workbunny/rqueue 目录下创建 TestBuilderDelayed.php
-./webman workbunny:rqueue-builder test 1 -d
-# 或
-./webman workbunny:rqueue-builder test 1 --delayed
-```
-
-- **命令支持二级菜单**
-```shell
 # 在 process/workbunny/rqueue/project 目录下创建 TestBuilder.php
-./webman workbunny:rqueue-builder project/test 1
+./webman workbunny:rqueue-builder project/test --mode=queue
+
+# 在 process/workbunny/rqueue/project 目录下创建 TestAllBuilder.php
+./webman workbunny:rqueue-builder project/testAll --mode=queue
 
 # 延迟同理
 ```
 
-#### 说明：
+#### GroupBuilder 模式
 
-- **命令结构：**
+- 多个Builder对应一个Redis的Stream，类名与Group挂钩；
+- 可创建多个Builder
+- Builder中的生产者和消费者都与当前Stream绑定，多个消费进程竞争消费Stream中的消息；
+
+##### 命令行创建
+
 ```shell
-workbunny:rqueue-builder [-d|--delayed] [--] <name> <count>
+# 创建一个拥有单进程消费者的GroupBuilder
+./webman workbunny:rqueue-builder test --mode=group
+# 创建一个拥有4进程消费者的GroupBuilder
+./webman workbunny:rqueue-builder test 4 --mode=group
 
-# 【必填】 name：Builder名称
-# 【必填】count：启动的消费者进程数量
-# 【选填】-d/--delayed：是否是延迟队列
+# 创建一个拥有单进程消费者的延迟GroupBuilder
+./webman workbunny:rqueue-builder test --delayed--mode=group
+# 创建一个拥有4进程消费者的延迟GroupBuilder
+./webman workbunny:rqueue-builder test 4 --delayed--mode=group
 ```
 
-- 在项目根目录下命令会在 **process/workbunny/rqueue** 路径下创建一个Builder，并且将该Builder自动加入 **config/plugin/workbunny/webman-rqueue/process.php** 配置中作为自定义进程启动；**（如不需要自动加载消费者进程，请自行注释该配置）**；
+##### 支持二级菜单
+```shell
+# 在 process/workbunny/rqueue 目录下创建 TestBuilder.php
+./webman workbunny:rqueue-builder test --mode=group
 
-- 消费是异步的，不会阻塞当前进程，不会影响 **webman/workerman** 的 **status**；
+# 在 process/workbunny/rqueue/project 目录下创建 TestBuilder.php
+./webman workbunny:rqueue-builder project/test --mode=group
+
+# 在 process/workbunny/rqueue/project 目录下创建 TestAllBuilder.php
+./webman workbunny:rqueue-builder project/testAll --mode=group
+
+# 延迟同理
+```
+
 
 - **Builder文件结构入下，可自行调整类属性：**
 ```php
