@@ -119,7 +119,9 @@ composer require workbunny/webman-rqueue
 - 一个GroupBuilder类对应一个消费Group和一个消费逻辑 ```QueueBuilder::handler()```
 - 一个GroupBuilder可对应一个/多个Redis-Stream-Key，通过配置 ```QueueBuilder::$config['queues']```
 - GroupBuilder类使用定时器进行消费，使用定时器释放当前 Stream-Key 上**所有Group收取过的闲置消息**
-- 可以使用多个GroupBuilder类配置相同的 ```QueueBuilder::$config['queues']```，从而达到一条/多条队列由不同的消费逻辑进行处理
+- 可以使用多个GroupBuilder类配置相同的 ```QueueBuilder::$config['queues']```，从而达到一条/多条队列由不同的消费逻辑进行处理；
+  - 基于此特性，可以实现消息持久化的发布订阅
+  - 基于此特性，可以实现RabbitMQ的exchange模式
 
 #### 命令行
 
