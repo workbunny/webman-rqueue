@@ -63,7 +63,8 @@ final class QueueBuilderTest extends BaseTestCase
         // xrange
         $result = $this->get($this->_queueBuilder, $id);
         // verify
-        $this->assertArrayHasKey($id, $result);
+        $this->assertTrue(isset($result[$id]));
+//        $this->assertArrayHasKey($id, $result);
         $this->assertEquals('test', $result[$id]['_body']);
         $this->assertContainsEquals([
             '_id' => $id
@@ -79,7 +80,8 @@ final class QueueBuilderTest extends BaseTestCase
         // xrange
         $result = $this->get($this->_queueBuilderDelayed, $id);
         // verify
-        $this->assertArrayHasKey($id, $result);
+        $this->assertTrue(isset($result[$id]));
+//        $this->assertArrayHasKey($id, $result);
         $this->assertEquals('test', $result[$id]['_body']);
         $this->assertContainsEquals([
             '_id' => $id
@@ -101,7 +103,8 @@ final class QueueBuilderTest extends BaseTestCase
         $this->assertTrue($result);
         // xrange
         $result = $this->get($this->_queueBuilder, $id);
-        $this->assertArrayHasKey($id, $result);
+        $this->assertTrue(isset($result[$id]));
+//        $this->assertArrayHasKey($id, $result);
         $this->assertEquals('test', $result[$id]['_body']);
         $this->assertContainsEquals([
             '_id' => $id
@@ -117,7 +120,8 @@ final class QueueBuilderTest extends BaseTestCase
         // xrange
         $result = $this->get($this->_queueBuilderDelayed, $id);
         // verify
-        $this->assertArrayHasKey($id, $result);
+        $this->assertTrue(isset($result[$id]));
+//        $this->assertArrayHasKey($id, $result);
         $this->assertEquals('test', $result[$id]['_body']);
         $this->assertContainsEquals([
             '_id' => $id

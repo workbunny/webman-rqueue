@@ -63,7 +63,8 @@ final class GroupBuilderTest extends BaseTestCase
         // xrange
         $result = $this->get($this->_builder, $id);
         // verify
-        $this->assertArrayHasKey($id, $result);
+        $this->assertTrue(isset($result[$id]));
+//        $this->assertArrayHasKey($id, $result);
         $this->assertEquals('test', $result[$id]['_body']);
         $this->assertContainsEquals([
             '_id' => $id
@@ -79,7 +80,8 @@ final class GroupBuilderTest extends BaseTestCase
         // xrange
         $result = $this->get($this->_builderDelayed, $id);
         // verify
-        $this->assertArrayHasKey($id, $result);
+        $this->assertTrue(isset($result[$id]));
+//        $this->assertArrayHasKey($id, $result);
         $this->assertEquals('test', $result[$id]['_body']);
         $this->assertContainsEquals([
             '_id' => $id
@@ -101,7 +103,8 @@ final class GroupBuilderTest extends BaseTestCase
         $this->assertTrue($result);
         // xrange
         $result = $this->get($this->_builder, $id);
-        $this->assertArrayHasKey($id, $result);
+        $this->assertTrue(isset($result[$id]));
+//        $this->assertArrayHasKey($id, $result);
         $this->assertEquals('test', $result[$id]['_body']);
         $this->assertContainsEquals([
             '_id' => $id
@@ -117,7 +120,8 @@ final class GroupBuilderTest extends BaseTestCase
         // xrange
         $result = $this->get($this->_builderDelayed, $id);
         // verify
-        $this->assertArrayHasKey($id, $result);
+        $this->assertTrue(isset($result[$id]));
+//        $this->assertArrayHasKey($id, $result);
         $this->assertEquals('test', $result[$id]['_body']);
         $this->assertContainsEquals([
             '_id' => $id
