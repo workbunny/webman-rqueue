@@ -26,6 +26,7 @@ class WorkbunnyWebmanRqueueRemove extends AbstractCommand
         $this->addArgument('name', InputArgument::REQUIRED, 'builder name.');
         $this->addOption('delayed', 'd', InputOption::VALUE_NONE, 'Delayed mode.');
         $this->addOption('close', 'c', InputOption::VALUE_NONE, 'Close only mode.');
+        $this->addOption('mode', 'm', InputOption::VALUE_REQUIRED, 'Builder mode: queue, group', 'queue');
     }
 
     /**
@@ -35,9 +36,10 @@ class WorkbunnyWebmanRqueueRemove extends AbstractCommand
      */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $name = $input->getArgument('name');
+        $name    = $input->getArgument('name');
         $delayed = $input->getOption('delayed');
-        $close = $input->getOption('close');
+        $close   = $input->getOption('close');
+        $mode    = $input->getOption('mode');
         list($name, $namespace, $file) = $this->getFileInfo($name, $delayed);
         $file = $close ? '' : $file;
         if(!file_exists($process = config_path() . '/plugin/workbunny/webman-rqueue/process.php')) {
@@ -45,7 +47,10 @@ class WorkbunnyWebmanRqueueRemove extends AbstractCommand
         }
         // remove config
         $config = config('plugin.workbunny.webman-rqueue.process', []);
-        if(isset($config[$processName = AbstractBuilder::getName($className = "$namespace\\$name")])){
+        $className = "$namespace\\$name";
+        $processName = $delayed ? "$mode-$name-delayed" : "$mode-$name";
+//        $processName = AbstractBuilder::getName($className);
+        if(isset($config[$processName])){
             if(\file_put_contents($process, \preg_replace_callback("/    '$processName' => [[\s\S]*?],\r\n/",
                         function () {
                             return '';

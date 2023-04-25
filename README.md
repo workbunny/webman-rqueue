@@ -65,7 +65,10 @@ composer require workbunny/webman-rqueue
 
 #### 命令行
 
+**--mode默认为queue**
+
 - 创建
+
 ```shell
 # 创建一个拥有单进程消费者的QueueBuilder
 ./webman workbunny:rqueue-builder testQueue --mode=queue
@@ -100,6 +103,21 @@ composer require workbunny/webman-rqueue
 # 移除延迟Builder
 ./webman workbunny:rqueue-remove testQueue --delayed
 ./webman workbunny:rqueue-remove testQueue -d
+# 二级菜单同理
+```
+
+- 开启
+
+开启仅对配置进行移除
+
+```shell
+# 开启Builder
+./webman workbunny:rqueue-builder test --open --mode=queue
+./webman workbunny:rqueue-builder test -om queue
+# 开启延迟Builder
+./webman workbunny:rqueue-builder test --open --delayed --mode=queue
+./webman workbunny:rqueue-builder test -odm queue
+
 # 二级菜单同理
 ```
 
@@ -163,10 +181,25 @@ composer require workbunny/webman-rqueue
 
 ```shell
 # 移除Builder
-./webman workbunny:rqueue-remove testGroup
+./webman workbunny:rqueue-remove testGroup --mode=group
+./webman workbunny:rqueue-remove testGroup -m group
 # 移除延迟Builder
-./webman workbunny:rqueue-remove testGroup --delayed
-./webman workbunny:rqueue-remove testGroup -d
+./webman workbunny:rqueue-remove testGroup --delayed --mode=group
+./webman workbunny:rqueue-remove testGroup -dm group
+# 二级菜单同理
+```
+
+- 开启
+
+kaiqi仅对配置进行移除
+
+```shell
+# 开启Builder
+./webman workbunny:rqueue-builder testGroup --open --mode=group
+./webman workbunny:rqueue-builder testGroup -om group
+# 开启延迟Builder
+./webman workbunny:rqueue-builder testGroup --open --delayed --mode=group
+./webman workbunny:rqueue-builder testGroup -odm group
 # 二级菜单同理
 ```
 
