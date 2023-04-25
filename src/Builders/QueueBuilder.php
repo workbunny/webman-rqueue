@@ -86,7 +86,7 @@ class QueueBuilder extends AbstractBuilder
     public static function classContent(string $namespace, string $className, bool $isDelay): string
     {
         $isDelay = $isDelay ? 'true' : 'false';
-        $name = self::getName();
+        $name = self::getName("$namespace\\$className");
         return <<<doc
 <?php declare(strict_types=1);
 
@@ -101,9 +101,11 @@ class $className extends QueueBuilder
     /** @see QueueBuilder::\$config */
     protected array \$configs = [
         // 默认由类名自动生成
-        'queues'         => [ $name ],
+        'queues'         => [
+            '$name'
+        ],
         // 默认由类名自动生成        
-        'group'          => $name, 
+        'group'          => '$name',
         // 是否延迟         
         'delayed'        => $isDelay,
         // QOS    
