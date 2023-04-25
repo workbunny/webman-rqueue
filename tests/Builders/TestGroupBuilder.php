@@ -10,7 +10,7 @@ class TestGroupBuilder extends GroupBuilder
     
     /** @see GroupBuilder::$config */
     protected array $configs = [
-        'queue'          => '',          // TODO 队列名称 ，默认由类名自动生成
+        'queues'         => [''],          // TODO 队列名称 ，默认由类名自动生成
         'group'          => '',          // TODO 分组名称，默认由类名自动生成
         'delayed'        => false,    // TODO 是否延迟
         'prefetch_count' => 0,           // TODO QOS 数量

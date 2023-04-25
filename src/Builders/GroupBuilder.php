@@ -16,7 +16,7 @@ class GroupBuilder extends AbstractBuilder
      * 配置
      *
      * @var array = [
-     *  'queue'          => 'example',
+     *  'queues'         => ['example'],
      *  'group'          => 'example',
      *  'delayed'        => false,
      *  'prefetch_count' => 1,
