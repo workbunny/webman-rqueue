@@ -68,22 +68,24 @@ composer require workbunny/webman-rqueue
 - 创建
 ```shell
 # 创建一个拥有单进程消费者的QueueBuilder
-./webman workbunny:rqueue-builder test --mode=queue
+./webman workbunny:rqueue-builder testQueue --mode=queue
+./webman workbunny:rqueue-builder testQueue -m queue
 # 创建一个拥有4进程消费者的QueueBuilder
-./webman workbunny:rqueue-builder test 4 --mode=queue
-
+./webman workbunny:rqueue-builder testQueue 4 --mode=queue
+./webman workbunny:rqueue-builder testQueue 4 -m queue
 # 创建一个拥有单进程消费者的延迟QueueBuilder
-./webman workbunny:rqueue-builder test --delayed--mode=queue
+./webman workbunny:rqueue-builder testQueue --delayed --mode=queue
+./webman workbunny:rqueue-builder testQueue -dm queue
 # 创建一个拥有4进程消费者的延迟QueueBuilder
-./webman workbunny:rqueue-builder test 4 --delayed--mode=queue
+./webman workbunny:rqueue-builder testQueue 4 --delayed --mode=queue
+./webman workbunny:rqueue-builder testQueue 4 -dm queue
 
-
-# 在 process/workbunny/rqueue 目录下创建 TestBuilder.php
-./webman workbunny:rqueue-builder test --mode=queue
-# 在 process/workbunny/rqueue/project 目录下创建 TestBuilder.php
-./webman workbunny:rqueue-builder project/test --mode=queue
-# 在 process/workbunny/rqueue/project 目录下创建 TestAllBuilder.php
-./webman workbunny:rqueue-builder project/testAll --mode=queue
+# 在 process/workbunny/rqueue 目录下创建 TestQueueBuilder.php
+./webman workbunny:rqueue-builder testQueue
+# 在 process/workbunny/rqueue/project 目录下创建 TestQueueBuilder.php
+./webman workbunny:rqueue-builder project/testQueue
+# 在 process/workbunny/rqueue/project 目录下创建 TestAllQueueBuilder.php
+./webman workbunny:rqueue-builder project/testAllQueue
 # 延迟同理
 ```
 
@@ -94,10 +96,10 @@ composer require workbunny/webman-rqueue
 
 ```shell
 # 移除Builder
-./webman workbunny:rqueue-remove test --mode=queue
+./webman workbunny:rqueue-remove testQueue
 # 移除延迟Builder
-./webman workbunny:rqueue-remove test --delayed--mode=queue
-
+./webman workbunny:rqueue-remove testQueue --delayed
+./webman workbunny:rqueue-remove testQueue -d
 # 二级菜单同理
 ```
 
@@ -107,9 +109,11 @@ composer require workbunny/webman-rqueue
 
 ```shell
 # 关闭Builder
-./webman workbunny:rqueue-remove test --close--mode=queue
+./webman workbunny:rqueue-remove test --close --mode=queue
+./webman workbunny:rqueue-remove test -cm queue
 # 关闭延迟Builder
-./webman workbunny:rqueue-remove test --close--delayed--mode=queue
+./webman workbunny:rqueue-remove test --close --delayed --mode=queue
+./webman workbunny:rqueue-remove test -cdm queue
 
 # 二级菜单同理
 ```
@@ -128,23 +132,29 @@ composer require workbunny/webman-rqueue
 - 创建
 ```shell
 # 创建一个拥有单进程消费者的GroupBuilder
-./webman workbunny:rqueue-builder test --mode=group
+./webman workbunny:rqueue-builder testGroup --mode=group
+./webman workbunny:rqueue-builder testGroup -m group
 # 创建一个拥有4进程消费者的GroupBuilder
-./webman workbunny:rqueue-builder test 4 --mode=group
-
+./webman workbunny:rqueue-builder testGroup 4 --mode=group
+./webman workbunny:rqueue-builder testGroup 4 -m group
 # 创建一个拥有单进程消费者的延迟GroupBuilder
-./webman workbunny:rqueue-builder test --delayed--mode=group
+./webman workbunny:rqueue-builder testGroup --delayed--mode=group
+./webman workbunny:rqueue-builder testGroup -dm group
 # 创建一个拥有4进程消费者的延迟GroupBuilder
-./webman workbunny:rqueue-builder test 4 --delayed--mode=group
+./webman workbunny:rqueue-builder testGroup 4 --delayed--mode=group
+./webman workbunny:rqueue-builder testGroup 4 -dm group
 
 # 二级菜单
 
-# 在 process/workbunny/rqueue 目录下创建 TestBuilder.php
-./webman workbunny:rqueue-builder test --mode=group
-# 在 process/workbunny/rqueue/project 目录下创建 TestBuilder.php
-./webman workbunny:rqueue-builder project/test --mode=group
-# 在 process/workbunny/rqueue/project 目录下创建 TestAllBuilder.php
-./webman workbunny:rqueue-builder project/testAll --mode=group
+# 在 process/workbunny/rqueue 目录下创建 TestGroupBuilder.php
+./webman workbunny:rqueue-builder testGroup --mode=group
+./webman workbunny:rqueue-builder testGroup -m group
+# 在 process/workbunny/rqueue/project 目录下创建 TestGroupBuilder.php
+./webman workbunny:rqueue-builder project/testGroup --mode=group
+./webman workbunny:rqueue-builder project/testGroup -m group
+# 在 process/workbunny/rqueue/project 目录下创建 TestAllGroupBuilder.php
+./webman workbunny:rqueue-builder project/testAllGroup --mode=group
+./webman workbunny:rqueue-builder project/testAllGroup -m group
 ```
 
 - 移除
@@ -153,10 +163,10 @@ composer require workbunny/webman-rqueue
 
 ```shell
 # 移除Builder
-./webman workbunny:rqueue-remove test --mode=group
+./webman workbunny:rqueue-remove testGroup
 # 移除延迟Builder
-./webman workbunny:rqueue-remove test --delayed--mode=group
-
+./webman workbunny:rqueue-remove testGroup --delayed
+./webman workbunny:rqueue-remove testGroup -d
 # 二级菜单同理
 ```
 
@@ -166,10 +176,11 @@ composer require workbunny/webman-rqueue
 
 ```shell
 # 关闭Builder
-./webman workbunny:rqueue-remove test --close--mode=group
+./webman workbunny:rqueue-remove testGroup --close --mode=group
+./webman workbunny:rqueue-remove testGroup -cm group
 # 关闭延迟Builder
-./webman workbunny:rqueue-remove test --close--delayed--mode=group
-
+./webman workbunny:rqueue-remove testGroup --close --delayed --mode=group
+./webman workbunny:rqueue-remove testGroup -cdm group
 # 二级菜单同理
 ```
 
