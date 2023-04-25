@@ -54,15 +54,17 @@ class WorkbunnyWebmanRqueueRemove extends AbstractCommand
                 $this->info($output, "Config updated.");
             }
         }
-        // remove file
-        if(\file_exists($file)){
-            \unlink($file);
-            $this->info($output, "Builder removed.");
-        }
-        // remove empty dir
-        if(\dirname($file) !== base_path() . DIRECTORY_SEPARATOR . self::$baseProcessPath) {
-            is_empty_dir(\dirname($file), true);
-            $this->info($output, "Empty dir removed.");
+        if($file) {
+            // remove file
+            if(\file_exists($file)){
+                \unlink($file);
+                $this->info($output, "Builder removed.");
+            }
+            // remove empty dir
+            if(\dirname($file) !== base_path() . DIRECTORY_SEPARATOR . self::$baseProcessPath) {
+                is_empty_dir(\dirname($file), true);
+                $this->info($output, "Empty dir removed.");
+            }
         }
         return $this->success($output, "Builder $name removed successfully.");
     }

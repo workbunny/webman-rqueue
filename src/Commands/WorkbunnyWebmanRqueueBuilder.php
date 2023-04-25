@@ -24,6 +24,7 @@ class WorkbunnyWebmanRqueueBuilder extends AbstractCommand
         $this->addArgument('count', InputArgument::OPTIONAL, 'Number of processes started by builder. ', 1);
         $this->addOption('mode', 'm', InputOption::VALUE_REQUIRED, 'Builder mode: queue, rpc', 'queue');
         $this->addOption('delayed', 'd', InputOption::VALUE_NONE, 'Delay mode builder. ');
+        $this->addOption('open', 'a', InputOption::VALUE_NONE, 'Only update config. ');
     }
 
     /**
@@ -36,6 +37,7 @@ class WorkbunnyWebmanRqueueBuilder extends AbstractCommand
         $name    = $input->getArgument('name');
         $count   = $input->getArgument('count');
         $delayed = $input->getOption('delayed');
+        $open    = $input->getOption('open');
         $mode    = $input->getOption('mode');
         list($name, $namespace, $file) = $this->getFileInfo($name, $delayed);
         // check process.php
@@ -67,16 +69,18 @@ DOC;
                 }, \file_get_contents($process),1)) !== false) {
             $this->info($output, "Config updated.");
         }
-        // dir create
-        if (!\is_dir($path = \pathinfo($file, PATHINFO_DIRNAME))) {
-            \mkdir($path, 0777, true);
-        }
-        // file create
-        if(!\file_exists($file)){
-            if(\file_put_contents($file, $builderClass::classContent(
-                    $namespace, $name, \str_ends_with($name, 'Delayed')
-                )) !== false) {
-                $this->info($output, "Builder created.");
+        if(!$open) {
+            // dir create
+            if (!\is_dir($path = \pathinfo($file, PATHINFO_DIRNAME))) {
+                \mkdir($path, 0777, true);
+            }
+            // file create
+            if(!\file_exists($file)){
+                if(\file_put_contents($file, $builderClass::classContent(
+                        $namespace, $name, \str_ends_with($name, 'Delayed')
+                    )) !== false) {
+                    $this->info($output, "Builder created.");
+                }
             }
         }
         return $this->success($output, "Builder {$name} created successfully.");
