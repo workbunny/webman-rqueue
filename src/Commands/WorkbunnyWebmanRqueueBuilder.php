@@ -44,8 +44,7 @@ class WorkbunnyWebmanRqueueBuilder extends AbstractCommand
         }
         // check config
         $config = config('plugin.workbunny.webman-rqueue.process', []);
-        $processName = \str_replace('\\', '.', $className = "$namespace\\$name");
-        if(isset($config[$processName])){
+        if(isset($config[$processName = AbstractBuilder::getName($className = "$namespace\\$name")])){
             return $this->error($output, "Builder {$name} failed to create: Config already exists.");
         }
         // get mode

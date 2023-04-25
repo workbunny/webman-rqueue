@@ -7,6 +7,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Workbunny\WebmanRqueue\Builders\AbstractBuilder;
 use function Workbunny\WebmanRqueue\is_empty_dir;
 use function Workbunny\WebmanRqueue\base_path;
 use function Workbunny\WebmanRqueue\config_path;
@@ -44,8 +45,7 @@ class WorkbunnyWebmanRqueueRemove extends AbstractCommand
         }
         // remove config
         $config = config('plugin.workbunny.webman-rqueue.process', []);
-        $processName = \str_replace('\\', '.', "$namespace\\$name");
-        if(isset($config[$processName])){
+        if(isset($config[$processName = AbstractBuilder::getName($className = "$namespace\\$name")])){
             if(\file_put_contents($process, \preg_replace_callback("/    '$processName' => [[\s\S]*?],\r\n/",
                         function () {
                             return '';
