@@ -65,8 +65,9 @@ class WorkbunnyWebmanRqueueRemove extends AbstractCommand
             }
             // remove empty dir
             if(\dirname($file) !== base_path() . DIRECTORY_SEPARATOR . self::$baseProcessPath) {
-                is_empty_dir(\dirname($file), true);
-                $this->info($output, "Empty dir removed.");
+                if(is_empty_dir(\dirname($file), true)) {
+                    $this->info($output, "Empty dir removed.");
+                }
             }
         }
         return $this->success($output, "Builder $name removed successfully.");
