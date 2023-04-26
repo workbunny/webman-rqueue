@@ -163,7 +163,7 @@ trait MessageQueueMethod
             // group read
             if($res = $client->xReadGroup(
                 $groupName, $consumerName, $queueStreams, $builderConfig->getPrefetchCount(),
-                $this->timerInterval >= 1 ? $this->timerInterval : null
+                $this->timerInterval >= 1.0 ? (int)$this->timerInterval : null
             )) {
                 foreach ($res as $queueName => $item) {
                     $ids = [];
