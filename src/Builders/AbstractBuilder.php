@@ -6,6 +6,7 @@ use Illuminate\Redis\Connections\Connection;
 use support\Redis;
 use Workbunny\WebmanRqueue\BuilderConfig;
 use Workbunny\WebmanRqueue\Builders\Traits\MessageQueueMethod;
+use Workbunny\WebmanRqueue\Commands\AbstractCommand;
 use Workbunny\WebmanRqueue\Headers;
 use Workerman\Worker;
 
@@ -104,9 +105,17 @@ abstract class AbstractBuilder
         self::$_mainTimer = $mainTimer;
     }
 
-    public static function getName(string|null $class = null): string
+    /**
+     * @param string|null $class
+     * @param bool $short
+     * @return string
+     */
+    public static function getName(string|null $class = null, bool $short = true): string
     {
-        return str_replace('\\', ':', $class ?? get_called_class());
+        $class = $class ?? get_called_class();
+        return str_replace('\\', ':',
+            $short ? str_replace(AbstractCommand::$baseNamespace . '\\', '', $class) : $class
+        );
     }
 
     /**

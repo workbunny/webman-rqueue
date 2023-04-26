@@ -45,11 +45,10 @@ class WorkbunnyWebmanRqueueRemove extends AbstractCommand
         if(!file_exists($process = config_path() . '/plugin/workbunny/webman-rqueue/process.php')) {
             return $this->error($output, "Builder {$name} failed to clear: plugin/workbunny/webman-rqueue/process.php does not exist.");
         }
+        $processName = AbstractBuilder::getName($className = "$namespace\\$name", true) . "-$mode";
         // remove config
         $config = config('plugin.workbunny.webman-rqueue.process', []);
-        $className = "$namespace\\$name";
-//        $processName = AbstractBuilder::getName($className);
-        if(isset($config[$processName = "$mode-$name"])){
+        if(isset($config[$processName])){
             if(\file_put_contents($process, \preg_replace_callback("/    '$processName' => [[\s\S]*?],\r\n/",
                         function () {
                             return '';
