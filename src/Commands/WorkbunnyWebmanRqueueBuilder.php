@@ -24,7 +24,7 @@ class WorkbunnyWebmanRqueueBuilder extends AbstractCommand
         $this->addArgument('count', InputArgument::OPTIONAL, 'Number of processes started by builder. ', 1);
         $this->addOption('mode', 'm', InputOption::VALUE_REQUIRED, 'Builder mode: queue, group', 'queue');
         $this->addOption('delayed', 'd', InputOption::VALUE_NONE, 'Delay mode builder. ');
-        $this->addOption('open', 'a', InputOption::VALUE_NONE, 'Only update config. ');
+        $this->addOption('open', 'o', InputOption::VALUE_NONE, 'Only update config. ');
     }
 
     /**
@@ -47,9 +47,8 @@ class WorkbunnyWebmanRqueueBuilder extends AbstractCommand
         // check config
         $config = config('plugin.workbunny.webman-rqueue.process', []);
         $className = "$namespace\\$name";
-        $processName = $delayed ? "$mode-$name-delayed" : "$mode-$name";
 //        $processName = AbstractBuilder::getName($className);
-        if(isset($config[$processName])){
+        if(isset($config[$processName = "$mode-$name"])){
             return $this->error($output, "Builder {$name} failed to create: Config already exists.");
         }
         // get mode

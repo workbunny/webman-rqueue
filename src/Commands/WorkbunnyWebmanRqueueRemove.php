@@ -48,9 +48,8 @@ class WorkbunnyWebmanRqueueRemove extends AbstractCommand
         // remove config
         $config = config('plugin.workbunny.webman-rqueue.process', []);
         $className = "$namespace\\$name";
-        $processName = $delayed ? "$mode-$name-delayed" : "$mode-$name";
 //        $processName = AbstractBuilder::getName($className);
-        if(isset($config[$processName])){
+        if(isset($config[$processName = "$mode-$name"])){
             if(\file_put_contents($process, \preg_replace_callback("/    '$processName' => [[\s\S]*?],\r\n/",
                         function () {
                             return '';
