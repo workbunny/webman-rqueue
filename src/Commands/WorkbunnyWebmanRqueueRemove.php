@@ -49,7 +49,7 @@ class WorkbunnyWebmanRqueueRemove extends AbstractCommand
         // remove config
         $config = config('plugin.workbunny.webman-rqueue.process', []);
         if(isset($config[$processName])){
-            if(\file_put_contents($process, \preg_replace_callback("/    '$processName' => [[\s\S]*?],\r\n/",
+            if(\file_put_contents($process, \preg_replace_callback("/    '$processName' => [[\s\S]*?],(\r\n|\n)/",
                         function () {
                             return '';
                         }, \file_get_contents($process),1)
