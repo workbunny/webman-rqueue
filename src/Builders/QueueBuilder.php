@@ -92,6 +92,7 @@ class QueueBuilder extends AbstractBuilder
 
 namespace $namespace;
 
+use Workbunny\WebmanRqueue\Headers;
 use Workbunny\WebmanRqueue\Builders\QueueBuilder;
 use Illuminate\Redis\Connections\Connection;
 
@@ -124,14 +125,16 @@ class $className extends QueueBuilder
      * 【请勿移除该方法】
      * @param string \$id
      * @param array \$value = [
-     *     '_header' => [],
-     *     '_body'  => '',
+     *     '_header' => json_string,
+     *     '_body'  => string,
      * ]
      * @param Connection \$connection
      * @return bool
      */
     public function handler(string \$id, array \$value, Connection \$connection): bool 
     {
+        \$header = new Headers(\$value['_header']);
+        \$body   = \$value['_body']
         // TODO 请重写消费逻辑
         echo "请重写 $className::handler\\n";
         return true;
