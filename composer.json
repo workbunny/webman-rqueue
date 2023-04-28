@@ -17,8 +17,9 @@
   "require": {
     "php": "^8.1",
     "ext-redis": "*",
-    "webman/console": "^1.0",
+    "psr/log": "^2.0 | ^3.0",
     "psr/container": "^1.0 | ^2.0",
+    "webman/console": "^1.0",
     "illuminate/redis": "^10.0",
     "illuminate/events": "^10.0"
   },

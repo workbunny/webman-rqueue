@@ -3,6 +3,7 @@
 namespace Workbunny\WebmanRqueue\Builders;
 
 use Illuminate\Redis\Connections\Connection;
+use Psr\Log\LoggerInterface;
 use support\Redis;
 use Workbunny\WebmanRqueue\BuilderConfig;
 use Workbunny\WebmanRqueue\Builders\Traits\MessageQueueMethod;
@@ -46,11 +47,17 @@ abstract class AbstractBuilder
      */
     private Connection $_connection;
 
-    public function __construct()
+    /**
+     * @var LoggerInterface|null
+     */
+    private ?LoggerInterface $_logger = null;
+
+    public function __construct(?LoggerInterface $logger = null)
     {
         $this->setBuilderConfig(new BuilderConfig());
         $this->setHeader(new Headers());
         $this->setConnection(Redis::connection($this->connection));
+        $this->setLogger($logger);
     }
 
     /**
@@ -103,6 +110,22 @@ abstract class AbstractBuilder
     public static function setMainTimer(?int $mainTimer): void
     {
         self::$_mainTimer = $mainTimer;
+    }
+
+    /**
+     * @return LoggerInterface|null
+     */
+    public function getLogger(): ?LoggerInterface
+    {
+        return $this->_logger;
+    }
+
+    /**
+     * @param LoggerInterface|null $logger
+     */
+    public function setLogger(null|LoggerInterface $logger): void
+    {
+        $this->_logger = $logger;
     }
 
     /**

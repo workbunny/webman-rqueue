@@ -3,6 +3,7 @@
 namespace Workbunny\WebmanRqueue\Builders;
 
 use Illuminate\Redis\Connections\Connection;
+use Psr\Log\LoggerInterface;
 use RedisException;
 use Workbunny\WebmanRqueue\Builders\Traits\MessageQueueMethod;
 use Workerman\Timer;
@@ -27,9 +28,9 @@ class GroupBuilder extends AbstractBuilder
 
     private static ?int $_delTimer = null;
 
-    public function __construct()
+    public function __construct(?LoggerInterface $logger = null)
     {
-        parent::__construct();
+        parent::__construct($logger);
         $name = self::getName();
         $this->getBuilderConfig()->setGroup($this->config['group'] ?? $name);
         $this->getBuilderConfig()->setQueues($this->config['queues'] ?? [$name]);

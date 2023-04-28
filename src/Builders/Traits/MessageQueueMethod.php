@@ -136,6 +136,7 @@ trait MessageQueueMethod
             }
             return $count;
         }catch (RedisException $exception) {
+            $this->getLogger()?->debug($exception->getMessage(), $exception->getTrace());
             throw new WebmanRqueueException($exception->getMessage(), $exception->getCode(), $exception);
         }
     }
@@ -209,6 +210,7 @@ trait MessageQueueMethod
                 }
             }
         }catch (RedisException $exception) {
+            $this->getLogger()?->debug($exception->getMessage(), $exception->getTrace());
             throw new WebmanRqueueException($exception->getMessage(), $exception->getCode(), $exception);
         }
     }
