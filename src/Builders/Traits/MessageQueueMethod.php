@@ -19,7 +19,7 @@ trait MessageQueueMethod
         $queues = $queueName ? [$queueName] : $this->getBuilderConfig()->getQueues();
         $result = [];
         foreach ($queues as $queue) {
-            $result[$queue] = $this->getConnection()->client()->rawCommand('XINFO', 'STREAM', $queueName, 'FULL');
+            $result[$queue] = $this->getConnection()->client()->rawCommand('XINFO', 'STREAM', $queue, 'FULL');
         }
         return $result;
     }
@@ -34,7 +34,7 @@ trait MessageQueueMethod
         $queues = $queueName ? [$queueName] : $this->getBuilderConfig()->getQueues();
         $result = [];
         foreach ($queues as $queue) {
-            $result[$queue] = $this->getConnection()->client()->xInfo('STREAM', $queueName);
+            $result[$queue] = $this->getConnection()->client()->xInfo('STREAM', $queue);
         }
         return $result;
     }
@@ -66,7 +66,7 @@ trait MessageQueueMethod
         $queues = $queueName ? [$queueName] : $this->getBuilderConfig()->getQueues();
         $result = [];
         foreach ($queues as $queue) {
-            $result[$queue] = $this->getConnection()->client()->xInfo('GROUPS', $queueName, $groupName);
+            $result[$queue] = $this->getConnection()->client()->xInfo('GROUPS', $queue, $groupName);
         }
         return $result;
     }
@@ -81,12 +81,14 @@ trait MessageQueueMethod
             $queues = $this->getBuilderConfig()->getQueues();
             $client = $this->getConnection()->client();
             foreach ($queues as $queue) {
-                $firstId = array_keys($info[$queue]['first-entry'])[0];
-                $lastDeliveredId = $groups[$queue]['last-delivered-id'];
-                $result = $client->xRange($queue, $firstId, $lastDeliveredId, 100);
-                foreach ($result as $id => $value) {
-                    if($id !== $lastDeliveredId) {
-                        $client->xDel($queue, [$id]);
+                if($firstId = $info[$queue]['first-entry'] ?? []) {
+                    $firstId = array_keys($firstId)[0];
+                    $lastDeliveredId = $groups[$queue]['last-delivered-id'];
+                    $result = $client->xRange($queue, $firstId, $lastDeliveredId, 100);
+                    foreach ($result as $id => $value) {
+                        if($id !== $lastDeliveredId) {
+                            $client->xDel($queue, [$id]);
+                        }
                     }
                 }
             }
