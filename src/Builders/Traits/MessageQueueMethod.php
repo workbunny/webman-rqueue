@@ -77,13 +77,15 @@ trait MessageQueueMethod
      */
     public function del(): void
     {
-        if($groups = $this->getQueueGroupsInfo() and $info = $this->getQueueInfo()) {
+        $groups = $this->getQueueGroupsInfo();
+        $info = $this->getQueueInfo();
+        if($groups and $info) {
             $queues = $this->getBuilderConfig()->getQueues();
             $client = $this->getConnection()->client();
             foreach ($queues as $queue) {
-                if($firstId = $info[$queue]['first-entry'] ?? []) {
-                    $firstId = array_keys($firstId)[0];
-                    $lastDeliveredId = $groups[$queue]['last-delivered-id'];
+                $firstId = $info[$queue]['first-entry'][0] ?? null;
+                $lastDeliveredId = $groups[$queue]['last-delivered-id'] ?? null;
+                if($firstId and $lastDeliveredId) {
                     $result = $client->xRange($queue, $firstId, $lastDeliveredId, 100);
                     foreach ($result as $id => $value) {
                         if($id !== $lastDeliveredId) {
@@ -107,6 +109,7 @@ trait MessageQueueMethod
     {
         $client = $this->getConnection()->client();
         $header = new Headers($headers);
+        $header->_timestamp = $header->_timestamp > 0.0 ? $header->_timestamp : microtime(true);
         if(
             ($header->_delay and !$this->getBuilderConfig()->isDelayed()) or
             (!$header->_delay and $this->getBuilderConfig()->isDelayed())

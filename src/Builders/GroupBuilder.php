@@ -44,15 +44,15 @@ class GroupBuilder extends AbstractBuilder
     public function onWorkerStart(Worker $worker): void
     {
         if($this->getConnection()){
-            // del timer
-            self::$_delTimer = Timer::add($this->timerInterval, function() use ($worker) {
-                // auto del
-                $this->del();
-            });
             // consume timer
             self::setMainTimer(Timer::add($this->timerInterval / 1000, function () use ($worker) {
+                // del timer
+                self::$_delTimer = Timer::add($this->timerInterval, function() use ($worker) {
+                    // auto del
+                    $this->del();
+                });
                 // consume
-                $this->consume($worker);
+                $this->consume($worker, false);
                 // todo check pending
             }));
         }
