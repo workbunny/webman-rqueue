@@ -84,7 +84,8 @@ final class GroupBuilderTest extends BaseTestCase
 
         // publish
         $result = sync_publish($this->_builderDelayed, 'test', [
-            '_id' => $id = $this->id()
+            '_id'    => $id = $this->id(),
+            '_delay' => 5
         ]);
         $this->assertNotFalse($result);
         // xrange
@@ -94,7 +95,8 @@ final class GroupBuilderTest extends BaseTestCase
             $this->assertArrayHasKey($id, $result[$queue]);
             $this->assertEquals('test', $result[$queue][$id]['_body']);
             $this->assertContainsEquals([
-                '_id' => $id
+                '_id'    => $id,
+                '_delay' => 5
             ], (new Headers($result[$queue][$id]['_header']))->toArray());
         }
         // del
@@ -127,7 +129,8 @@ final class GroupBuilderTest extends BaseTestCase
 
         // publish
         $result = $this->_builderDelayed->publish( 'test', [
-            '_id' => $id = $this->id()
+            '_id'    => $id = $this->id(),
+            '_delay' => 5
         ]);
         $this->assertNotFalse($result);
         // xrange
@@ -137,7 +140,8 @@ final class GroupBuilderTest extends BaseTestCase
             $this->assertArrayHasKey($id, $result[$queue]);
             $this->assertEquals('test', $result[$queue][$id]['_body']);
             $this->assertContainsEquals([
-                '_id' => $id
+                '_id'    => $id,
+                '_delay' => 5
             ], (new Headers($result[$queue][$id]['_header']))->toArray());
         }
         // del
