@@ -24,17 +24,17 @@ class QueueBuilder extends AbstractBuilder
      *  'queue_size'     => 0,
      * ]
      */
-    protected array $config = [];
+    protected array $configs = [];
 
     public function __construct(?LoggerInterface $logger = null)
     {
         parent::__construct($logger);
         $name = self::getName();
-        $this->getBuilderConfig()->setGroup($this->config['group'] ?? $name);
-        $this->getBuilderConfig()->setQueues($this->config['queues'] ?? [$name]);
-        $this->getBuilderConfig()->setQueueSize($this->config['queue_size'] ?? 0);
-        $this->getBuilderConfig()->setPrefetchCount($this->config['prefetch_count'] ?? 0);
-        $this->getBuilderConfig()->setDelayed($this->config['delayed'] ?? false);
+        $this->getBuilderConfig()->setGroup($this->configs['group'] ?? $name);
+        $this->getBuilderConfig()->setQueues($this->configs['queues'] ?? [$name]);
+        $this->getBuilderConfig()->setQueueSize($this->configs['queue_size'] ?? 0);
+        $this->getBuilderConfig()->setPrefetchCount($this->configs['prefetch_count'] ?? 0);
+        $this->getBuilderConfig()->setDelayed($this->configs['delayed'] ?? false);
         $this->getBuilderConfig()->setCallback([$this, 'handler']);
     }
 
@@ -100,7 +100,7 @@ use Illuminate\Redis\Connections\Connection;
 class $className extends QueueBuilder
 {
     
-    /** @see QueueBuilder::\$config */
+    /** @see QueueBuilder::\$configs */
     protected array \$configs = [
         // 默认由类名自动生成
         'queues'         => [
