@@ -98,6 +98,25 @@ trait MessageQueueMethod
     }
 
     /**
+     * @param string $queueName
+     * @param string $groupName
+     * @param array $id
+     * @return bool
+     */
+    public function ack(string $queueName, string $groupName, array $id): bool
+    {
+        try {
+            $this->getConnection()->client()->xAck($queueName, $groupName, $id);
+            return true;
+        } catch (RedisException) {
+            $this->getLogger()?->warning('Ack failed. ', [
+                'queue' => $queueName, 'group' => $groupName, 'id' => $id
+            ]);
+        }
+        return false;
+    }
+
+    /**
      * @param string $body
      * @param array $headers = [
      *  @see Headers
@@ -177,7 +196,7 @@ trait MessageQueueMethod
                     foreach ($item as $id => $message){
                         // drop
                         if(!isset($message['_header']) or !isset($message['_body'])) {
-                            $client->xAck($queueName, $groupName, $this->idsAdd($ids, $id));
+                            $this->ack($queueName, $groupName, $this->idsAdd($ids, $id));
                             continue;
                         }
                         $header = new Headers($message['_header']);
@@ -187,27 +206,28 @@ trait MessageQueueMethod
                             $this->getBuilderConfig()->isDelayed() and $header->_delay > 0 and
                             (($header->_delay / 1000 + $header->_timestamp) - microtime(true)) > 0
                         ){
-                            // republish
-                            $header->_id = '*';
-                            $this->publish($body, $header->toArray());
-                            $client->xAck($queueName, $groupName, $this->idsAdd($ids, $id));
+                            // ack
+                            if ($this->ack($queueName, $groupName, $this->idsAdd($ids, $id))) {
+                                // republish
+                                $header->_id = '*';
+                                $this->publish($body, $header->toArray());
+                            }
                             continue;
                         }
                         try {
                             // handler
-                            if(!\call_user_func($this->getBuilderConfig()->getCallback(), $id, $message, $this->getConnection())) {
-                                // false to republish
+                            if (!\call_user_func($this->getBuilderConfig()->getCallback(), $id, $message, $this->getConnection())) {
+                                throw new WebmanRqueueException('Consume failed. ');
+                            }
+                            $this->ack($queueName, $groupName, $this->idsAdd($ids, $id));
+                        } catch (\Throwable $throwable) {
+                            if ($this->ack($queueName, $groupName, $this->idsAdd($ids, $id))) {
+                                // republish
                                 $header->_count = $header->_count + 1;
+                                $header->_error = $throwable->getMessage();
                                 $header->_id    = '*';
                                 $this->publish($body, $header->toArray());
                             }
-                            $client->xAck($queueName, $groupName, $this->idsAdd($ids, $id));
-                        }catch (\Throwable $throwable) {
-                            $header->_count = $header->_count + 1;
-                            $header->_error = $throwable->getMessage();
-                            $header->_id    = '*';
-                            $this->publish($body, $header->toArray());
-                            $client->xAck($queueName, $groupName, $this->idsAdd($ids, $id));
                         }
                     }
                     // del

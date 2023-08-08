@@ -6,6 +6,7 @@ use Illuminate\Redis\Connections\Connection;
 use Psr\Log\LoggerInterface;
 use RedisException;
 use Workbunny\WebmanRqueue\Builders\Traits\MessageQueueMethod;
+use Workbunny\WebmanRqueue\Exceptions\WebmanRqueueException;
 use Workerman\Timer;
 use Workerman\Worker;
 
@@ -51,9 +52,15 @@ class GroupBuilder extends AbstractBuilder
                     // auto del
                     $this->del();
                 });
-                // consume
-                $this->consume($worker, false);
                 // todo check pending
+                try {
+                    // consume
+                    $this->consume($worker, false);
+                } catch (WebmanRqueueException $exception) {
+                    $this->getLogger()?->warning('Consume exception. ', [
+                        'message' => $exception->getMessage(), 'code' => $exception->getCode()
+                    ]);
+                }
             }));
         }
     }

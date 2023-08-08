@@ -2,5 +2,5 @@
 return [
     'enable' => true,
 
-    'connection' => 'default'
+    'connection'  => 'default',
 ];
