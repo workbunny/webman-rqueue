@@ -44,7 +44,12 @@ class GroupBuilder extends AbstractBuilder
     /** @inheritDoc */
     public function onWorkerStart(Worker $worker): void
     {
+        // 初始化temp库
+        $this->_tempInit();
         if($this->getConnection()){
+            // requeue
+            $this->_tempRequeue();
+            // todo check pending
             // consume timer
             self::setMainTimer(Timer::add($this->timerInterval / 1000, function () use ($worker) {
                 // del timer
@@ -52,7 +57,6 @@ class GroupBuilder extends AbstractBuilder
                     // auto del
                     $this->del();
                 });
-                // todo check pending
                 try {
                     // consume
                     $this->consume($worker, false);

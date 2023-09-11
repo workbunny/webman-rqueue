@@ -42,10 +42,14 @@ class QueueBuilder extends AbstractBuilder
     /** @inheritDoc */
     public function onWorkerStart(Worker $worker): void
     {
+        // 初始化temp库
+        $this->_tempInit();
         if($this->getConnection()){
+            // requeue
+            $this->_tempRequeue();
+            // todo check pending
             // main timer
-            self::setMainTimer(Timer::add($this->timerInterval / 1000, function () use($worker) {
-                // todo check pending
+            $this->setMainTimer(Timer::add($this->timerInterval / 1000, function () use($worker) {
                 try {
                     // consume
                     $this->consume($worker, false);
@@ -68,8 +72,8 @@ class QueueBuilder extends AbstractBuilder
                 echo $e->getMessage() . PHP_EOL;
             }
         }
-        if(self::getMainTimer()) {
-            Timer::del(self::getMainTimer());
+        if($this->getMainTimer()) {
+            Timer::del($this->getMainTimer());
         }
     }
 
