@@ -30,7 +30,7 @@ abstract class AbstractBuilder
     /**
      * @var int|null
      */
-    private static ?int $_mainTimer = null;
+    private ?int $_mainTimer = null;
 
     /**
      * @var Headers|null
@@ -99,17 +99,17 @@ abstract class AbstractBuilder
     /**
      * @return int|null
      */
-    public static function getMainTimer(): ?int
+    public function getMainTimer(): ?int
     {
-        return self::$_mainTimer;
+        return $this->_mainTimer;
     }
 
     /**
      * @param int|null $mainTimer
      */
-    public static function setMainTimer(?int $mainTimer): void
+    public function setMainTimer(?int $mainTimer): void
     {
-        self::$_mainTimer = $mainTimer;
+        $this->_mainTimer = $mainTimer;
     }
 
     /**

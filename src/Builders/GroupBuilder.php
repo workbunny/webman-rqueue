@@ -46,7 +46,7 @@ class GroupBuilder extends AbstractBuilder
     {
         if($this->getConnection()){
             // consume timer
-            self::setMainTimer(Timer::add($this->timerInterval / 1000, function () use ($worker) {
+            $this->setMainTimer(Timer::add($this->timerInterval / 1000, function () use ($worker) {
                 // del timer
                 self::$_delTimer = Timer::add($this->timerInterval, function() use ($worker) {
                     // auto del
@@ -75,8 +75,8 @@ class GroupBuilder extends AbstractBuilder
                 echo $e->getMessage() . PHP_EOL;
             }
         }
-        if(self::getMainTimer()) {
-            Timer::del(self::getMainTimer());
+        if($this->getMainTimer()) {
+            Timer::del($this->getMainTimer());
         }
         if(self::$_delTimer) {
             Timer::del(self::$_delTimer);

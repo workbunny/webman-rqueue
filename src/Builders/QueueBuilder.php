@@ -44,7 +44,7 @@ class QueueBuilder extends AbstractBuilder
     {
         if($this->getConnection()){
             // main timer
-            self::setMainTimer(Timer::add($this->timerInterval / 1000, function () use($worker) {
+            $this->setMainTimer(Timer::add($this->timerInterval / 1000, function () use($worker) {
                 // todo check pending
                 try {
                     // consume
@@ -68,8 +68,8 @@ class QueueBuilder extends AbstractBuilder
                 echo $e->getMessage() . PHP_EOL;
             }
         }
-        if(self::getMainTimer()) {
-            Timer::del(self::getMainTimer());
+        if($this->getMainTimer()) {
+            Timer::del($this->getMainTimer());
         }
     }
 
