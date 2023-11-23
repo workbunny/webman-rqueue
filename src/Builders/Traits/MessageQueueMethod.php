@@ -9,6 +9,8 @@ use Workerman\Worker;
 
 trait MessageQueueMethod
 {
+    use MessageTempMethod;
+
     /**
      * @param string|null $queueName
      * @return array
@@ -144,13 +146,13 @@ trait MessageQueueMethod
         $count = 0;
         try {
             foreach ($queues as $queue) {
-                if($queueSize > 0) {
+                if ($queueSize > 0) {
                     $queueLen = $client->xLen($queue);
                     if($queueLen >= $queueSize){
                         throw new WebmanRqueueException('Queue size exceeded.');
                     }
                 }
-                if(!$client->xAdd($queue, (string)$header->_id, [
+                if (!$client->xAdd($queue, (string)$header->_id, [
                     '_header' => $header->toString(),
                     '_body'   => $body,
                 ])) {
@@ -159,7 +161,51 @@ trait MessageQueueMethod
                 $count ++;
             }
             return $count;
-        }catch (RedisException $exception) {
+        } catch (RedisException $exception) {
+            $this->getLogger()?->debug($exception->getMessage(), $exception->getTrace());
+            throw new WebmanRqueueException($exception->getMessage(), $exception->getCode(), $exception);
+        }
+    }
+
+    /**
+     * @param Worker $worker
+     * @param int $pendingTimeout
+     * @param bool $autoDel
+     * @return void
+     */
+    public function claim(Worker $worker, int $pendingTimeout, bool $autoDel = true): void
+    {
+        try {
+            $client = $this->getConnection()->client();
+            $builderConfig = $this->getBuilderConfig();
+            $queues = $builderConfig->getQueues();
+            $groupName = $builderConfig->getGroup();
+            $consumerName = "$groupName-$worker->id";
+            foreach ($queues as $queueName) {
+                if ($datas = $client->xAutoClaim(
+                    $queueName, $groupName, $consumerName,
+                    $pendingTimeout * 1000,
+                    '0-0', -1
+                )) {
+                    if ($client->xAck($queueName, $groupName, $datas)) {
+                        // pending超时的消息自动ack，并存入本地缓存
+                        try {
+                            foreach ($datas as $value) {
+                                $this->tempInsert($queueName, $value);
+                            }
+                        }
+                        // 忽略失败
+                        catch (\Throwable) {}
+
+                        if ($autoDel) {
+                            // 移除
+                            $client->xDel($queueName, array_keys($datas));
+                        }
+                    }
+                }
+            }
+
+        } catch (RedisException $exception) {
             $this->getLogger()?->debug($exception->getMessage(), $exception->getTrace());
             throw new WebmanRqueueException($exception->getMessage(), $exception->getCode(), $exception);
         }

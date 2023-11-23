@@ -6,7 +6,7 @@
   "authors": [
     {
       "name": "chaz6chez",
-      "email": "chaz6chez1993@qoutlook.com",
+      "email": "chaz6chez1993@outlook.com",
       "homepage": "https://chaz6chez.cn"
     }
   ],
@@ -21,7 +21,8 @@
     "psr/container": "^1.0 | ^2.0",
     "webman/console": "^1.0",
     "illuminate/redis": "^10.0",
-    "illuminate/events": "^10.0"
+    "illuminate/events": "^10.0",
+    "illuminate/database": "^10.0"
   },
   "require-dev": {
     "workerman/webman-framework": "^1.0",

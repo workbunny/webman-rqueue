@@ -13,7 +13,7 @@ trait MessageTempMethod
 {
     protected ?int $_requeueTimer= null;
 
-    protected function _tempInit(): void
+    public function tempInit(): void
     {
         if (config('database.plugin.workbunny.webman-rqueue.local-storage')) {
             $builder = Schema::connection('plugin.workbunny.webman-rqueue.local-storage');
@@ -29,7 +29,7 @@ trait MessageTempMethod
         }
     }
 
-    protected function _tempInsert(string $queue, array $value): int
+    public function tempInsert(string $queue, array $value): int
     {
         if (config('database.plugin.workbunny.webman-rqueue.local-storage')) {
             // 数据储存至文件
@@ -43,7 +43,7 @@ trait MessageTempMethod
         return 0;
     }
 
-    protected function _tempRequeue(): void
+    public function tempRequeue(): void
     {
         if (config('database.plugin.workbunny.webman-rqueue.local-storage')) {
             // 设置消息重载定时器
