@@ -17,24 +17,34 @@ trait MessageTempMethod
     {
         if (config('database.plugin.workbunny.webman-rqueue.local-storage')) {
             $builder = Schema::connection('plugin.workbunny.webman-rqueue.local-storage');
-            if (!$builder->hasTable('temp')) {
-                $builder->create('temp', function (Blueprint $table) {
+            if (!$builder->hasTable('requeue')) {
+                $builder->create('requeue', function (Blueprint $table) {
                     $table->id();
                     $table->string('queue');
                     $table->json('data');
                     $table->integer('create_at');
                 });
-                echo 'local-storage db created. ' . PHP_EOL;
+                echo 'local-storage db requeue-table created. ' . PHP_EOL;
+            }
+
+            if (!$builder->hasTable('pending')) {
+                $builder->create('pending', function (Blueprint $table) {
+                    $table->id();
+                    $table->string('queue');
+                    $table->json('data');
+                    $table->integer('create_at');
+                });
+                echo 'local-storage db pending-table created. ' . PHP_EOL;
             }
         }
     }
 
-    public function tempInsert(string $queue, array $value): int
+    public function tempInsert(string $table, string $queue, array $value): int
     {
         if (config('database.plugin.workbunny.webman-rqueue.local-storage')) {
             // 数据储存至文件
             return Db::connection('plugin.workbunny.webman-rqueue.local-storage')
-                ->table('temp')->insertGetId([
+                ->table($table)->insertGetId([
                     'queue'      => $queue,
                     'data'       => json_encode($value, JSON_UNESCAPED_UNICODE),
                     'created_at' => time()
@@ -52,11 +62,11 @@ trait MessageTempMethod
                     $interval,
                     function () {
                         $connection = Db::connection('plugin.workbunny.webman-rqueue.local-storage');
-                        $connection->table('temp')->select()->chunkById(500, function (Collection $collection) use ($connection) {
+                        $connection->table('requeue')->select()->chunkById(500, function (Collection $collection) use ($connection) {
                             $client = $this->getConnection()->client();
                             foreach ($collection as $item) {
                                 if ($client->xAdd($item->queue,'*', json_decode($item->data, true))) {
-                                    $connection->table('temp')->delete($item->id);
+                                    $connection->table('pending')->delete($item->id);
                                 }
                             }
                         });
