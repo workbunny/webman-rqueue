@@ -2,5 +2,6 @@
 return [
     'enable' => true,
 
-    'connection'  => 'default',
+    'connection'       => 'default',
+    'requeue_interval' => 0
 ];

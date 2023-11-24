@@ -7,6 +7,7 @@ use Psr\Log\LoggerInterface;
 use support\Redis;
 use Workbunny\WebmanRqueue\BuilderConfig;
 use Workbunny\WebmanRqueue\Builders\Traits\MessageQueueMethod;
+use Workbunny\WebmanRqueue\Builders\Traits\MessageTempMethod;
 use Workbunny\WebmanRqueue\Commands\AbstractCommand;
 use Workbunny\WebmanRqueue\Headers;
 use Workerman\Worker;
@@ -14,11 +15,13 @@ use Workerman\Worker;
 abstract class AbstractBuilder
 {
     use MessageQueueMethod;
+    use MessageTempMethod;
 
     public static bool $debug = false;
 
     /** @var string redis配置 */
     protected string $connection = 'default';
+
     /** @var float|null 消费间隔 1ms */
     protected ?float $timerInterval = 1;
 
@@ -31,6 +34,11 @@ abstract class AbstractBuilder
      * @var int|null
      */
     private ?int $_mainTimer = null;
+
+    /**
+     * @var int|null
+     */
+    private ?int $_pendingTimer = null;
 
     /**
      * @var Headers|null
@@ -110,6 +118,22 @@ abstract class AbstractBuilder
     public function setMainTimer(?int $mainTimer): void
     {
         $this->_mainTimer = $mainTimer;
+    }
+
+    /**
+     * @return int|null
+     */
+    public function getPendingTimer(): ?int
+    {
+        return $this->_pendingTimer;
+    }
+
+    /**
+     * @param int|null $pendingTimer
+     */
+    public function setPendingTimer(?int $pendingTimer): void
+    {
+        $this->_pendingTimer = $pendingTimer;
     }
 
     /**

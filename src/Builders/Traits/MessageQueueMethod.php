@@ -9,6 +9,8 @@ use Workerman\Worker;
 
 trait MessageQueueMethod
 {
+    use MessageTempMethod;
+
     /**
      * @param string|null $queueName
      * @return array
@@ -144,13 +146,13 @@ trait MessageQueueMethod
         $count = 0;
         try {
             foreach ($queues as $queue) {
-                if($queueSize > 0) {
+                if ($queueSize > 0) {
                     $queueLen = $client->xLen($queue);
                     if($queueLen >= $queueSize){
                         throw new WebmanRqueueException('Queue size exceeded.');
                     }
                 }
-                if(!$client->xAdd($queue, (string)$header->_id, [
+                if (!$client->xAdd($queue, (string)$header->_id, [
                     '_header' => $header->toString(),
                     '_body'   => $body,
                 ])) {
@@ -159,7 +161,91 @@ trait MessageQueueMethod
                 $count ++;
             }
             return $count;
-        }catch (RedisException $exception) {
+        } catch (RedisException $exception) {
+            $this->getLogger()?->debug($exception->getMessage(), $exception->getTrace());
+            throw new WebmanRqueueException($exception->getMessage(), $exception->getCode(), $exception);
+        }
+    }
+
+    /**
+     * @param string $body
+     * @param array $headers = [
+     *  @see Headers
+     * ]
+     * @return int|false
+     */
+    public function requeue(string $body, array $headers = []): int|false
+    {
+        $client = $this->getConnection()->client();
+        $header = new Headers($headers);
+        $header->_timestamp = $header->_timestamp > 0.0 ? $header->_timestamp : microtime(true);
+        if(
+            ($header->_delay and !$this->getBuilderConfig()->isDelayed()) or
+            (!$header->_delay and $this->getBuilderConfig()->isDelayed())
+        ){
+            throw new WebmanRqueueException('Invalid publish.');
+        }
+        $count = 0;
+        $queues = $this->getBuilderConfig()->getQueues();
+        foreach ($queues as $queue) {
+            try {
+                if (!$client->xAdd($queue, (string)$header->_id, $data = [
+                    '_header' => $header->toString(),
+                    '_body'   => $body,
+                ])) {
+                    return false;
+                }
+                $count ++;
+            } catch (RedisException $exception) {
+                $this->getLogger()?->debug($exception->getMessage(), $exception->getTrace());
+                $this->tempInsert('requeue', $queue, $data);
+            }
+        }
+        return $count;
+    }
+
+    /**
+     * @param Worker $worker
+     * @param int $pendingTimeout
+     * @param bool $autoDel
+     * @return void
+     */
+    public function claim(Worker $worker, int $pendingTimeout, bool $autoDel = true): void
+    {
+        try {
+            $client = $this->getConnection()->client();
+            $builderConfig = $this->getBuilderConfig();
+            $queues = $builderConfig->getQueues();
+            $groupName = $builderConfig->getGroup();
+            $consumerName = "$groupName-$worker->id";
+            foreach ($queues as $queueName) {
+                if ($datas = $client->xAutoClaim(
+                    $queueName, $groupName, $consumerName,
+                    $pendingTimeout * 1000,
+                    '0-0', -1
+                )) {
+                    if ($client->xAck($queueName, $groupName, $datas)) {
+                        // pending超时的消息自动ack，并存入本地缓存
+                        try {
+                            foreach ($datas as $message) {
+                                $header = new Headers($message['_header']);
+                                $body = $message['_body'];
+                                $this->tempInsert('pending', $queueName, $message);
+                                $this->requeue($body, $header->toArray());
+                            }
+                        }
+                        // 忽略失败
+                        catch (\Throwable) {}
+
+                        if ($autoDel) {
+                            // 移除
+                            $client->xDel($queueName, array_keys($datas));
+                        }
+                    }
+                }
+            }
+
+        } catch (RedisException $exception) {
             $this->getLogger()?->debug($exception->getMessage(), $exception->getTrace());
             throw new WebmanRqueueException($exception->getMessage(), $exception->getCode(), $exception);
         }
@@ -210,7 +296,7 @@ trait MessageQueueMethod
                             if ($this->ack($queueName, $groupName, $this->idsAdd($ids, $id))) {
                                 // republish
                                 $header->_id = '*';
-                                $this->publish($body, $header->toArray());
+                                $this->requeue($body, $header->toArray());
                             }
                             continue;
                         }
@@ -226,7 +312,7 @@ trait MessageQueueMethod
                                 $header->_count = $header->_count + 1;
                                 $header->_error = $throwable->getMessage();
                                 $header->_id    = '*';
-                                $this->publish($body, $header->toArray());
+                                $this->requeue($body, $header->toArray());
                             }
                         }
                     }

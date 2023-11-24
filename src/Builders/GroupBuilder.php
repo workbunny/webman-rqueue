@@ -9,6 +9,7 @@ use Workbunny\WebmanRqueue\Builders\Traits\MessageQueueMethod;
 use Workbunny\WebmanRqueue\Exceptions\WebmanRqueueException;
 use Workerman\Timer;
 use Workerman\Worker;
+use function Workbunny\WebmanRqueue\config;
 
 class GroupBuilder extends AbstractBuilder
 {
@@ -18,11 +19,12 @@ class GroupBuilder extends AbstractBuilder
      * 配置
      *
      * @var array = [
-     *  'queues'         => ['example'],
-     *  'group'          => 'example',
-     *  'delayed'        => false,
-     *  'prefetch_count' => 1,
-     *  'queue_size'     => 0,
+     *  'queues'          => ['example'],
+     *  'group'           => 'example',
+     *  'delayed'         => false,
+     *  'prefetch_count'  => 1,
+     *  'queue_size'      => 0,
+     *  'pending_timeout' => 0
      * ]
      */
     protected array $configs = [];
@@ -46,7 +48,7 @@ class GroupBuilder extends AbstractBuilder
     {
         if($this->getConnection()){
             // consume timer
-            $this->setMainTimer(Timer::add($this->timerInterval / 1000, function () use ($worker) {
+            self::setMainTimer(Timer::add($this->timerInterval / 1000, function () use ($worker) {
                 // del timer
                 self::$_delTimer = Timer::add($this->timerInterval, function() use ($worker) {
                     // auto del
@@ -76,7 +78,7 @@ class GroupBuilder extends AbstractBuilder
             }
         }
         if($this->getMainTimer()) {
-            Timer::del($this->getMainTimer());
+            Timer::del(self::getMainTimer());
         }
         if(self::$_delTimer) {
             Timer::del(self::$_delTimer);
@@ -120,17 +122,19 @@ class $className extends GroupBuilder
     /** @see QueueBuilder::\$configs */
     protected array \$configs = [
         // 默认由类名自动生成
-        'queues'         => [
+        'queues'          => [
             '$name'
         ],
         // 默认由类名自动生成        
-        'group'          => '$name', 
+        'group'           => '$name', 
         // 是否延迟         
-        'delayed'        => $isDelay,
+        'delayed'         => $isDelay,
         // QOS    
-        'prefetch_count' => 0,
+        'prefetch_count'  => 0,
         // Queue size
-        'queue_size'     => 0,           
+        'queue_size'      => 0,
+        // 消息pending超时，毫秒
+        'pending_timeout' => 0           
     ];
     
     /** @var float|null 消费间隔 1ms */

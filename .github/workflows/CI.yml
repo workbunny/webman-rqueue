@@ -1,7 +1,7 @@
 name: CI
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "master", "2.x" ]
   pull_request:
     branches: [ "master" ]
 
@@ -12,7 +12,7 @@ jobs:
     strategy:
       matrix:
         php:
-#          - "8.3"
+          - "8.3"
           - "8.2"
           - "8.1"
         redis:

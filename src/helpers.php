@@ -47,6 +47,14 @@ function config_path(): string
 /**
  * @return string
  */
+function runtime_path(): string
+{
+    return AbstractBuilder::$debug ? base_path() . '\runtime' : \runtime_path();
+}
+
+/**
+ * @return string
+ */
 function base_path(): string
 {
     return AbstractBuilder::$debug ? dirname(__DIR__) : \base_path();
