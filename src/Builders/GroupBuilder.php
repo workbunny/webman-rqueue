@@ -50,7 +50,7 @@ class GroupBuilder extends AbstractBuilder
         $this->tempInit();
         if($this->getConnection()){
             // requeue
-            $this->tempRequeue();
+            $this->tempRequeueInit();
             // check pending
             if (($pendingTimeout = $this->configs['pending_timeout'] ?? 0) > 0) {
                 $this->setPendingTimer(Timer::add($pendingTimeout / 1000, function () use ($worker, $pendingTimeout) {

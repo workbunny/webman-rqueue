@@ -46,8 +46,8 @@ class QueueBuilder extends AbstractBuilder
         // 初始化temp库
         $this->tempInit();
         if($this->getConnection()){
-            // requeue
-            $this->tempRequeue();
+            // requeue timer
+            $this->tempRequeueInit();
             // check pending
             if (($pendingTimeout = $this->configs['pending_timeout'] ?? 0) > 0) {
                 $this->setPendingTimer(Timer::add($pendingTimeout / 1000, function () use ($worker, $pendingTimeout) {
