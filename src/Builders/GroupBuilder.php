@@ -54,7 +54,13 @@ class GroupBuilder extends AbstractBuilder
                     // auto del
                     $this->del();
                 });
-                // todo check pending
+                // check pending
+                if (($pendingTimeout = $this->configs['pending_timeout'] ?? 0) > 0) {
+                    $this->setPendingTimer(Timer::add($pendingTimeout / 1000, function () use ($worker, $pendingTimeout) {
+                        // 自动ack
+                        $this->claim($worker, $pendingTimeout, true);
+                    }));
+                }
                 try {
                     // consume
                     $this->consume($worker, false);
