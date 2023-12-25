@@ -48,7 +48,7 @@ class QueueBuilder extends AbstractBuilder
                 // todo check pending
                 try {
                     // consume
-                    $this->consume($worker, false);
+                    $this->consume($worker, true);
                 } catch (WebmanRqueueException $exception) {
                     $this->getLogger()?->warning('Consume exception. ', [
                         'message' => $exception->getMessage(), 'code' => $exception->getCode()

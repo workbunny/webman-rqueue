@@ -23,6 +23,8 @@ class WorkbunnyWebmanRqueueRemove extends AbstractCommand
      */
     protected function configure(): void
     {
+        $this->setName('workbunny:rqueue-remove')
+            ->setDescription('Remove a workbunny/webman-rqueue Builder. ');
         $this->addArgument('name', InputArgument::REQUIRED, 'builder name.');
         $this->addOption('delayed', 'd', InputOption::VALUE_NONE, 'Delayed mode.');
         $this->addOption('close', 'c', InputOption::VALUE_NONE, 'Close only mode.');
