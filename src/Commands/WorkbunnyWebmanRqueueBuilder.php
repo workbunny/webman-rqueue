@@ -20,7 +20,10 @@ class WorkbunnyWebmanRqueueBuilder extends AbstractCommand
      */
     protected function configure(): void
     {
-        $this->addArgument('name', InputArgument::REQUIRED, 'Builder name. ', 'default');
+        $this->setName('workbunny:rqueue-builder')
+            ->setDescription('Create and initialize a workbunny/webman-rqueue Builder. ');
+
+        $this->addArgument('name', InputArgument::REQUIRED, 'Builder name. ');
         $this->addArgument('count', InputArgument::OPTIONAL, 'Number of processes started by builder. ', 1);
         $this->addOption('mode', 'm', InputOption::VALUE_REQUIRED, 'Builder mode: queue, group', 'queue');
         $this->addOption('delayed', 'd', InputOption::VALUE_NONE, 'Delay mode builder. ');

@@ -18,6 +18,13 @@ class WorkbunnyWebmanRqueueList extends AbstractCommand
     protected static $defaultName        = 'workbunny:rqueue-list';
     protected static $defaultDescription = 'Show workbunny/webman-rqueue Builders list. ';
 
+
+    protected function configure()
+    {
+        $this->setName('workbunny:rqueue-list')
+            ->setDescription('Show workbunny/webman-rqueue Builders list. ');
+    }
+
     /**
      * @param InputInterface $input
      * @param OutputInterface $output
