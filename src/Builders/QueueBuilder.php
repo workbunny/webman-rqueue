@@ -59,7 +59,7 @@ class QueueBuilder extends AbstractBuilder
             $this->setMainTimer(Timer::add($this->timerInterval / 1000, function () use($worker) {
                 try {
                     // consume
-                    $this->consume($worker, false);
+                    $this->consume($worker, true);
                 } catch (WebmanRqueueException $exception) {
                     $this->getLogger()?->warning('Consume exception. ', [
                         'message' => $exception->getMessage(), 'code' => $exception->getCode()
