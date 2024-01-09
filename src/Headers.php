@@ -3,11 +3,30 @@
 namespace Workbunny\WebmanRqueue;
 class Headers
 {
+    /**
+     * @var string 消息id
+     */
     public string $_id = '*';
+
+    /**
+     * @var int 延迟时间 ms
+     */
     public int $_delay = 0;
+    /**
+     * @var float 时间戳 s
+     */
     public float $_timestamp = 0.0;
+    /**
+     * @var int 重试计数
+     */
     public int $_count = 0;
+    /**
+     * @var string 错误信息
+     */
     public string $_error = '';
+    /**
+     * @var bool 自动移除
+     */
     public bool $_delete = true;
 
     public function __construct(string|array|null $headers = null)
