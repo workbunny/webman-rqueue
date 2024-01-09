@@ -20,9 +20,9 @@
     "psr/log": "^2.0 | ^3.0",
     "psr/container": "^1.0 | ^2.0",
     "webman/console": "^1.0",
-    "illuminate/redis": "^10.0",
-    "illuminate/events": "^10.0",
-    "illuminate/database": "^10.0"
+    "illuminate/redis": "^9.0 | ^10.0",
+    "illuminate/events": "^9.0 | ^10.0",
+    "illuminate/database": "^9.0 | ^10.0"
   },
   "require-dev": {
     "workerman/webman-framework": "^1.0",
