@@ -20,6 +20,7 @@ trait MessageTempMethod
         'requeue', 'pending'
     ];
 
+
     /**
      * 初始化temp
      *
@@ -27,8 +28,19 @@ trait MessageTempMethod
      */
     public function tempInit(): void
     {
-        if (config('database.plugin.workbunny.webman-rqueue.local-storage')) {
-            $builder = Schema::connection('plugin.workbunny.webman-rqueue.local-storage');
+        $config = config('database.connections')['plugin.workbunny.webman-rqueue.local-storage'] ?? [];
+        if ($config) {
+            // 创建temp数据库文件
+            $file = $config['database'];
+            if (!file_exists($file)) {
+                // 创建目录
+                if (!is_dir($dir = dirname($file))) {
+                    \mkdir($dir, 0777, true);
+                }
+                \touch($file);
+            }
+            // 创建数据库结构
+            $builder = Db::schema('plugin.workbunny.webman-rqueue.local-storage');
             foreach (self::$_tables as $table) {
                 if (!$builder->hasTable($table)) {
                     $builder->create($table, function (Blueprint $table) {
@@ -53,7 +65,8 @@ trait MessageTempMethod
      */
     public function tempInsert(string $table, string $queue, array $value): int
     {
-        if (config('database.plugin.workbunny.webman-rqueue.local-storage')) {
+        $config = config('database.connections')['plugin.workbunny.webman-rqueue.local-storage'] ?? [];
+        if ($config) {
             if (in_array($table, self::$_tables)) {
                 // 数据储存至文件
                 return Db::connection('plugin.workbunny.webman-rqueue.local-storage')
@@ -77,7 +90,8 @@ trait MessageTempMethod
      */
     public function tempSelect(string $table, ?array $where = null, array $columns = ['*']): QueryBuilder|HigherOrderWhenProxy|null
     {
-        if (config('database.plugin.workbunny.webman-rqueue.local-storage')) {
+        $config = config('database.connections')['plugin.workbunny.webman-rqueue.local-storage'] ?? [];
+        if ($config) {
             if (in_array($table, self::$_tables)) {
                 // 数据储存至文件
                 return Db::connection('plugin.workbunny.webman-rqueue.local-storage')
@@ -96,7 +110,8 @@ trait MessageTempMethod
      */
     public function tempRequeueInit(): void
     {
-        if (config('database.plugin.workbunny.webman-rqueue.local-storage')) {
+        $config = config('database.connections')['plugin.workbunny.webman-rqueue.local-storage'] ?? [];
+        if ($config) {
             // 设置消息重载定时器
             if (($interval = config('plugin.workbunny.webman-rqueue.app.requeue_interval', 0)) > 0) {
                 $this->_requeueTimer = Timer::add(
