@@ -219,11 +219,17 @@ trait MessageQueueMethod
             $groupName = $builderConfig->getGroup();
             $consumerName = "$groupName-$worker->id";
             foreach ($queues as $queueName) {
-                if ($datas = $client->xAutoClaim(
+                $datas = $client->xAutoClaim(
                     $queueName, $groupName, $consumerName,
                     $pendingTimeout * 1000,
                     '0-0', -1
-                )) {
+                );
+                foreach ($datas as $k => $v) {
+                    if (!$v or $v === '0-0') {
+                        unset($datas[$k]);
+                    }
+                }
+                if ($datas) {
                     if ($client->xAck($queueName, $groupName, $datas)) {
                         // pending超时的消息自动ack，并存入本地缓存
                         try {
