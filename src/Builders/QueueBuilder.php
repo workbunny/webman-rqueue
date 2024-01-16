@@ -155,7 +155,7 @@ class $className extends QueueBuilder
     public function handler(string \$id, array \$value, Connection \$connection): bool 
     {
         \$header = new Headers(\$value['_header']);
-        \$body   = \$value['_body']
+        \$body   = \$value['_body'];
         // TODO 请重写消费逻辑
         echo "请重写 $className::handler\\n";
         return true;

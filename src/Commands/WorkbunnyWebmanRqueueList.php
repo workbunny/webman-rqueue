@@ -10,6 +10,7 @@ use SplFileInfo;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Workbunny\WebmanRqueue\Builders\AbstractBuilder;
 use function Workbunny\WebmanRqueue\base_path;
 use function Workbunny\WebmanRqueue\config;
 
@@ -38,12 +39,17 @@ class WorkbunnyWebmanRqueueList extends AbstractCommand
         $configs = config('plugin.workbunny.webman-rqueue.process', []);
 
         /** @var SplFileInfo $file */
-        foreach ($files as $file){
-            $key = str_replace(
-                '/',
-                '.',
-                str_replace(base_path() . '/' , '', $fileName = $file->getPath() . '/' . $file->getBasename('.php'))
+        foreach ($files as $file) {
+            $key = AbstractBuilder::getName(
+                str_replace('/', '\\',
+                    str_replace(base_path() . '/' , '', $fileName = $file->getPath() . '/' . $file->getBasename('.php'))
+                )
             );
+//            $key = str_replace(
+//                '/',
+//                '.',
+//                str_replace(base_path() . '/' , '', $fileName = $file->getPath() . '/' . $file->getBasename('.php'))
+//            );
             $name = str_replace(base_path() . '/' . self::$baseProcessPath . '/', '', $fileName);
             $rows[] = [
                 strtolower(
