@@ -45,9 +45,17 @@
 
 - 基于Redis Stream的轻量级队列；
 - Queue 模式：多个消费者竞争消费
+  - 支持普通消费
+  - 支持延迟消费
 - Group 模式：多个消费组订阅消费
-
-支持延迟消息；
+  - 支持普通消费
+  - 支持延迟消费
+- 可靠的重载机制，防止消息意外丢失/重复消费
+  - 使用本地sqlite库储存因意外中断的消息
+  - 自动加载本地消息至队列
+- 简单易用容易理解的使用方式
+  - 丰富的命令行助手，助手函数
+  - BuilderClass继承模式（类似ORM的ModelClass）
 
 ## 安装
 
@@ -294,9 +302,11 @@ TestBuilder::instance()->publish('abc', [
 
 ## 说明
 
-- **小范围生产验证中，欢迎 [issue](https://github.com/workbunny/webman-rqueue/issues) 和 PR**；
+- **生产可用，欢迎 [issue](https://github.com/workbunny/webman-rqueue/issues) 和 PR**；
 
 - **Redis Stream** 本身没有 **delayed** 或 **non-delayed** 之分，组件代码将它们区分的原因是不希望 **delayed** 被滥用；开发者应该明确哪些消息是延迟的、哪些是立即的，并且明确体现，也方便维护，因为延迟消息过多会导致消息堆积，从而占用Redis过多的资源；
 
 - **Redis Stream** 的持久化依赖 **Redis** 本身的持久化策略，在一定情况下 **Redis Stream** 也并非是可靠型的消息队列;关于持久化相关内容，请仔细阅读 **[Redis中文文档](http://www.redis.cn/topics/persistence.html)**；
+
+- 本地重载机制使用了SQLite3，详见 **src/Builders/Traits/MessageTempMethod**
 
