@@ -11,7 +11,7 @@ use Workerman\Timer;
 use Workerman\Worker;
 use function Workbunny\WebmanRqueue\config;
 
-class GroupBuilder extends AbstractBuilder
+abstract class GroupBuilder extends AbstractBuilder
 {
     use MessageQueueMethod;
 
@@ -149,16 +149,7 @@ class $className extends GroupBuilder
     /** @var string redis配置 */
     protected string \$connection = 'default';
     
-    /**
-     * 【请勿移除该方法】
-     * @param string \$id
-     * @param array \$value = [
-     *     '_header' => json_string,
-     *     '_body'  => string,
-     * ]
-     * @param Connection \$connection
-     * @return bool
-     */
+    /** @inheritDoc */
     public function handler(string \$id, array \$value, Connection \$connection): bool 
     {
         \$header = new Headers(\$value['_header']);
