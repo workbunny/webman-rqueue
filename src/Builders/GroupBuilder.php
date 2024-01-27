@@ -161,4 +161,16 @@ class $className extends GroupBuilder
 }
 doc;
     }
+
+    /**
+     * 消费函数
+     * @param string $id
+     * @param array $value = [
+     *     '_header' => json_string,
+     *     '_body'  => string,
+     * ]
+     * @param Connection $connection
+     * @return bool
+     */
+    abstract public function handler(string $id, array $value, Connection $connection): bool;
 }
