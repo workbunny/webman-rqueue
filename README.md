@@ -44,18 +44,19 @@
 ## 简介
 
 - 基于Redis Stream的轻量级队列；
-- Queue 模式：多个消费者竞争消费
+- [Queue 模式：多个消费者竞争消费](#queue)
   - 支持普通消费
   - 支持延迟消费
-- Group 模式：多个消费组订阅消费
+- [Group 模式：多个消费组订阅消费](#group)
   - 支持普通消费
   - 支持延迟消费
-- 可靠的重载机制，防止消息意外丢失/重复消费
+- [可靠的重载机制，防止消息意外丢失/重复消费](#temp)
   - 使用本地sqlite库储存因意外中断的消息
   - 自动加载本地消息至队列
 - 简单易用容易理解的使用方式
   - 丰富的命令行助手，助手函数
   - BuilderClass继承模式（类似ORM的ModelClass）
+  - [支持自定义BuilderClass，实现自定义的消费逻辑](#custom)
 
 ## 安装
 
@@ -65,7 +66,7 @@ composer require workbunny/webman-rqueue
 
 ## 使用
 
-### QueueBuilder
+### <a id='queue'>QueueBuilder</a>
 
 - 一个QueueBuilder类对应一个消费Group和一个消费逻辑 ```QueueBuilder::handler()```
 - 一个QueueBuilder可对应一个/多个Redis-Stream-Key，通过配置 ```QueueBuilder::$config['queues']```
@@ -144,7 +145,7 @@ composer require workbunny/webman-rqueue
 # 二级菜单同理
 ```
 
-### GroupBuilder
+### <a id='group'>GroupBuilder</a>
 
 - 一个GroupBuilder类对应一个消费Group和一个消费逻辑 ```QueueBuilder::handler()```
 - 一个GroupBuilder可对应一个/多个Redis-Stream-Key，通过配置 ```QueueBuilder::$config['queues']```
@@ -199,7 +200,7 @@ composer require workbunny/webman-rqueue
 
 - 开启
 
-kaiqi仅对配置进行移除
+开启仅对配置进行移除
 
 ```shell
 # 开启Builder
@@ -225,6 +226,56 @@ kaiqi仅对配置进行移除
 # 二级菜单同理
 ```
 
+### <a id='custom'>自定义Builder</a>
+
+如queue/group Builder都不满足需求，您可继承 AbstractBuilder 自行实现您所需要的Builder
+
+- 您的Builder基类需要继承AbstractBuilder实现，可参考QueueBuilder/GroupBuilder
+   - onWorkerStart 用于进程启动时的触发逻辑，
+   这里一般使用Timer结合读取队列触发callback来实现消费队列
+   - onWorkerStop 用于进程停止时的回收动作
+   - onWorkerReload 用于进程重载时的触发动作，除非有特殊处理，通常置空
+```php
+    /*
+     * Builder 启动时
+     *
+     * @param Worker $worker
+     * @return void
+     */
+    abstract public function onWorkerStart(Worker $worker): void;
+
+    /**
+     * Builder 停止时
+     *
+     * @param Worker $worker
+     * @return void
+     */
+    abstract public function onWorkerStop(Worker $worker): void;
+
+    /**
+     * Builder 重加载时
+     *
+     * @param Worker $worker
+     * @return void
+     */
+    abstract public function onWorkerReload(Worker $worker): void;
+```
+- classContent方法是配合命令行，用于自动生成队列文件，如不使用，可置空
+```php
+    /**
+     * Command 获取需要创建的类文件内容
+     *
+     * @param string $namespace
+     * @param string $className
+     * @param bool $isDelay
+     * @return string
+     */
+    abstract public static function classContent(string $namespace, string $className, bool $isDelay): string;
+```
+- Traits类提供所需的基础方法，按需在您的Builder基类中引用
+   - MessageQueueMethod 提供针对redis-stream队列的基础操作，如ack、publish、consume等、
+   - <a id='temp'>MessageTempMethod 提供本地数据缓存，用于对异常数据的收集和requeue</a>
+   - 如上述traits无法满足需求，可自定义Traits
 
 ### 注意
 
