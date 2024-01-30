@@ -21,14 +21,38 @@ trait MessageQueueMethod
         $queues = $queueName ? [$queueName] : $this->getBuilderConfig()->getQueues();
         $result = [];
         foreach ($queues as $queue) {
-            $result[$queue] = $this->getConnection()->client()->rawCommand('XINFO', 'STREAM', $queue, 'FULL');
+            $result[$queue] = $this->getConnection()->client()->xInfo('STREAM', $queue, 'FULL');
         }
         return $result;
     }
 
     /**
+     * 获取Builder中所有队列的信息
+     *
      * @param string|null $queueName
-     * @return array
+     * @return array = [
+     *  queueName => [
+     *      'length' => int,
+     *      'radix-tree-keys' => int,
+     *      'radix-tree-nodes' => int,
+     *      'last-generated-id' => string [int-int],
+     *      'max-deleted-entry-id' => string [int-int],
+     *      'entries-added' => int,
+     *      'groups' => int,
+     *      'first-entry' => [
+     *          ID => [
+     *              '_header' => array,
+     *              '_body'   => string
+     *          ]
+     *      ],
+     *      'last-entry' => [
+     *          ID => [
+     *              '_header' => array,
+     *              '_body'   => string
+     *          ]
+     *      ]
+     *  ]
+     * ]
      * @throws RedisException
      */
     public function getQueueInfo(null|string $queueName = null): array
@@ -58,42 +82,65 @@ trait MessageQueueMethod
     }
 
     /**
+     * 获取Builder中所有队列的消费组信息
+     *
      * @param string|null $queueName
-     * @return array
+     * @return array = [
+     *  queueName => [
+     *      [
+     *          'name' => string,
+     *          'consumers' => int,
+     *          'pending' => int,
+     *          'last-delivered-id' => string [int-int],
+     *          'entries-read' => int,
+     *          'lag' => int
+     *      ]
+     *  ]
+     * ]
      * @throws RedisException
      */
     public function getQueueGroupsInfo(null|string $queueName = null): array
     {
-        $groupName = $this->getBuilderConfig()->getGroup();
         $queues = $queueName ? [$queueName] : $this->getBuilderConfig()->getQueues();
         $result = [];
         foreach ($queues as $queue) {
-            $result[$queue] = $this->getConnection()->client()->xInfo('GROUPS', $queue, $groupName);
+            $result[$queue] = $this->getConnection()->client()->xInfo('GROUPS', $queue);
         }
         return $result;
     }
 
     /**
+     * 仅移除所有分组中游标最落后的至第一个消息间的消息
+     *
      * @return void
      * @throws RedisException
      */
     public function del(): void
     {
-        $groups = $this->getQueueGroupsInfo();
-        $info = $this->getQueueInfo();
-        if($groups and $info) {
-            $queues = $this->getBuilderConfig()->getQueues();
-            $client = $this->getConnection()->client();
-            foreach ($queues as $queue) {
-                $firstId = $info[$queue]['first-entry'][0] ?? null;
-                $lastDeliveredId = $groups[$queue]['last-delivered-id'] ?? null;
-                if($firstId and $lastDeliveredId) {
-                    $result = $client->xRange($queue, $firstId, $lastDeliveredId, 100);
-                    foreach ($result as $id => $value) {
-                        if($id !== $lastDeliveredId) {
-                            $client->xDel($queue, [$id]);
-                        }
-                    }
+        $groupsInfo = $this->getQueueGroupsInfo();
+        $queuesInfo = $this->getQueueInfo();
+        $client = $this->getConnection()->client();
+        foreach ($groupsInfo as $queueName => $info) {
+            $queueFirstId = array_key_first($queuesInfo[$queueName]['first-entry'] ?? []);
+            $lastDeliveredIds = array_column($info, 'last-delivered-id');
+            $leftMin = $rightMin = null;
+            // 获取当前队列所有group中最落后的游标id
+            foreach ($lastDeliveredIds as $lastDeliveredId) {
+                list($left, $right) = explode('-', $lastDeliveredId);
+                if (
+                    ($left > $leftMin and $leftMin !== null) or
+                    ($left == $leftMin and $right > $rightMin and $leftMin !== null)
+                ) {
+                    continue;
+                }
+                $leftMin = $left;
+                $rightMin = $right;
+            }
+            $lastDeliveredId = "$leftMin-$rightMin";
+            $result = $client->xRange($queueName, $queueFirstId, $lastDeliveredId, 100);
+            foreach ($result as $id => $value) {
+                if($id !== $lastDeliveredId) {
+                    $client->xDel($queueName, [$id]);
                 }
             }
         }
@@ -119,14 +166,17 @@ trait MessageQueueMethod
     }
 
     /**
+     * 消息发布
+     *  1. 多队列模式不能保证事务
+     *
      * @param string $body
      * @param array $headers = [
      *  @see Headers
      * ]
      * @param string|null $queueName
-     * @return int|false
+     * @return array 返回成功的消息ID组
      */
-    public function publish(string $body, array $headers = [], null|string $queueName = null): int|false
+    public function publishGetIds(string $body, array $headers = [], null|string $queueName = null): array
     {
         $client = $this->getConnection()->client();
         $header = new Headers($headers);
@@ -143,7 +193,7 @@ trait MessageQueueMethod
             throw new WebmanRqueueException('Invalid queue name.');
         }
         $queues = $queueName ? [$queueName] : $queues;
-        $count = 0;
+        $ids = [];
         try {
             foreach ($queues as $queue) {
                 if ($queueSize > 0) {
@@ -152,19 +202,34 @@ trait MessageQueueMethod
                         throw new WebmanRqueueException('Queue size exceeded.');
                     }
                 }
-                if (!$client->xAdd($queue, (string)$header->_id, [
+                if ($id = $client->xAdd($queue, (string)$header->_id, [
                     '_header' => $header->toString(),
                     '_body'   => $body,
                 ])) {
-                    return false;
+                    $ids[] = $id;
                 }
-                $count ++;
             }
-            return $count;
+            return $ids;
         } catch (RedisException $exception) {
             $this->getLogger()?->debug($exception->getMessage(), $exception->getTrace());
             throw new WebmanRqueueException($exception->getMessage(), $exception->getCode(), $exception);
         }
+    }
+
+    /**
+     * 消息发布
+     *   1. 多队列模式不能保证事务
+     *
+     * @param string $body
+     * @param array $headers = [
+     *  @param string|null $queueName
+     * @return int|false 0/false 代表全部失败
+     *@see Headers
+     * ]
+     */
+    public function publish(string $body, array $headers = [], null|string $queueName = null): int|false
+    {
+        return count($this->publishGetIds($body, $headers, $queueName));
     }
 
     /**
@@ -198,7 +263,9 @@ trait MessageQueueMethod
                 $count ++;
             } catch (RedisException $exception) {
                 $this->getLogger()?->debug($exception->getMessage(), $exception->getTrace());
-                $this->tempInsert('requeue', $queue, $data);
+                if (isset($data)) {
+                    $this->tempInsert('requeue', $queue, $data);
+                }
             }
         }
         return $count;

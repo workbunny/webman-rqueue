@@ -22,6 +22,18 @@ function sync_publish(AbstractBuilder $builder, string $body, array $headers = [
 }
 
 /**
+ * 同步生产
+ * @param QueueBuilder $builder
+ * @param string $body
+ * @param array $headers
+ * @return array
+ */
+function sync_publish_get_ids(AbstractBuilder $builder, string $body, array $headers = []) : array
+{
+    return $builder->publishGetIds($body, $headers);
+}
+
+/**
  * @param string|null $key
  * @param mixed|null $default
  * @return array|mixed|null
