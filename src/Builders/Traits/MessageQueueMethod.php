@@ -123,24 +123,26 @@ trait MessageQueueMethod
         foreach ($groupsInfo as $queueName => $info) {
             $queueFirstId = array_key_first($queuesInfo[$queueName]['first-entry'] ?? []);
             $lastDeliveredIds = array_column($info, 'last-delivered-id');
-            $leftMin = $rightMin = null;
-            // 获取当前队列所有group中最落后的游标id
-            foreach ($lastDeliveredIds as $lastDeliveredId) {
-                list($left, $right) = explode('-', $lastDeliveredId);
-                if (
-                    ($left > $leftMin and $leftMin !== null) or
-                    ($left == $leftMin and $right > $rightMin and $leftMin !== null)
-                ) {
-                    continue;
+            if ($queueFirstId and $lastDeliveredIds) {
+                $leftMin = $rightMin = null;
+                // 获取当前队列所有group中最落后的游标id
+                foreach ($lastDeliveredIds as $lastDeliveredId) {
+                    list($left, $right) = explode('-', $lastDeliveredId);
+                    if (
+                        ($left > $leftMin and $leftMin !== null) or
+                        ($left == $leftMin and $right > $rightMin and $leftMin !== null)
+                    ) {
+                        continue;
+                    }
+                    $leftMin = $left;
+                    $rightMin = $right;
                 }
-                $leftMin = $left;
-                $rightMin = $right;
-            }
-            $lastDeliveredId = "$leftMin-$rightMin";
-            $result = $client->xRange($queueName, $queueFirstId, $lastDeliveredId, 100);
-            foreach ($result as $id => $value) {
-                if($id !== $lastDeliveredId) {
-                    $client->xDel($queueName, [$id]);
+                $lastDeliveredId = "$leftMin-$rightMin";
+                $result = $client->xRange($queueName, $queueFirstId, $lastDeliveredId, 100);
+                foreach ($result as $id => $value) {
+                    if($id !== $lastDeliveredId) {
+                        $client->xDel($queueName, [$id]);
+                    }
                 }
             }
         }
