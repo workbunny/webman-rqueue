@@ -293,28 +293,30 @@ trait MessageQueueMethod
                     $pendingTimeout * 1000,
                     '0-0', -1
                 );
-                foreach ($datas as $k => $v) {
-                    if (!$v or $v === '0-0') {
-                        unset($datas[$k]);
-                    }
-                }
-                if ($datas) {
-                    if ($client->xAck($queueName, $groupName, $datas)) {
-                        // pending超时的消息自动ack，并存入本地缓存
-                        try {
-                            foreach ($datas as $message) {
-                                $header = new Headers($message['_header']);
-                                $body = $message['_body'];
-                                $this->tempInsert('pending', $queueName, $message);
-                                $this->requeue($body, $header->toArray());
-                            }
+                if (is_array($datas)) {
+                    foreach ($datas as $k => $v) {
+                        if (!$v or $v === '0-0') {
+                            unset($datas[$k]);
                         }
-                        // 忽略失败
-                        catch (\Throwable) {}
+                    }
+                    if ($datas) {
+                        if ($client->xAck($queueName, $groupName, $datas)) {
+                            // pending超时的消息自动ack，并存入本地缓存
+                            try {
+                                foreach ($datas as $message) {
+                                    $header = new Headers($message['_header']);
+                                    $body = $message['_body'];
+                                    $this->tempInsert('pending', $queueName, $message);
+                                    $this->requeue($body, $header->toArray());
+                                }
+                            }
+                                // 忽略失败
+                            catch (\Throwable) {}
 
-                        if ($autoDel) {
-                            // 移除
-                            $client->xDel($queueName, array_keys($datas));
+                            if ($autoDel) {
+                                // 移除
+                                $client->xDel($queueName, array_keys($datas));
+                            }
                         }
                     }
                 }
@@ -351,48 +353,50 @@ trait MessageQueueMethod
                 $groupName, $consumerName, $queueStreams, $builderConfig->getPrefetchCount(),
                 $this->timerInterval >= 1.0 ? (int)$this->timerInterval : null
             )) {
-                foreach ($res as $queueName => $item) {
-                    $ids = [];
-                    // messages
-                    foreach ($item as $id => $message){
-                        // drop
-                        if(!isset($message['_header']) or !isset($message['_body'])) {
-                            $this->ack($queueName, $groupName, $this->idsAdd($ids, $id));
-                            continue;
-                        }
-                        $header = new Headers($message['_header']);
-                        $body = $message['_body'];
-                        // delay message
-                        if(
-                            $this->getBuilderConfig()->isDelayed() and $header->_delay > 0 and
-                            (($header->_delay / 1000 + $header->_timestamp) - microtime(true)) > 0
-                        ){
-                            // ack
-                            if ($this->ack($queueName, $groupName, $this->idsAdd($ids, $id))) {
-                                // republish
-                                $header->_id = '*';
-                                $this->requeue($body, $header->toArray());
+                if (is_array($res)) {
+                    foreach ($res as $queueName => $item) {
+                        $ids = [];
+                        // messages
+                        foreach ($item as $id => $message){
+                            // drop
+                            if(!isset($message['_header']) or !isset($message['_body'])) {
+                                $this->ack($queueName, $groupName, $this->idsAdd($ids, $id));
+                                continue;
                             }
-                            continue;
-                        }
-                        try {
-                            // handler
-                            if (!\call_user_func($this->getBuilderConfig()->getCallback(), $id, $message, $this->getConnection())) {
-                                throw new WebmanRqueueException('Consume failed. ');
+                            $header = new Headers($message['_header']);
+                            $body = $message['_body'];
+                            // delay message
+                            if(
+                                $this->getBuilderConfig()->isDelayed() and $header->_delay > 0 and
+                                (($header->_delay / 1000 + $header->_timestamp) - microtime(true)) > 0
+                            ){
+                                // ack
+                                if ($this->ack($queueName, $groupName, $this->idsAdd($ids, $id))) {
+                                    // republish
+                                    $header->_id = '*';
+                                    $this->requeue($body, $header->toArray());
+                                }
+                                continue;
                             }
-                            $this->ack($queueName, $groupName, $this->idsAdd($ids, $id));
-                        } catch (\Throwable $throwable) {
-                            if ($this->ack($queueName, $groupName, $this->idsAdd($ids, $id))) {
-                                // republish
-                                $header->_count = $header->_count + 1;
-                                $header->_error = $throwable->getMessage();
-                                $header->_id    = '*';
-                                $this->requeue($body, $header->toArray());
+                            try {
+                                // handler
+                                if (!\call_user_func($this->getBuilderConfig()->getCallback(), $id, $message, $this->getConnection())) {
+                                    throw new WebmanRqueueException('Consume failed. ');
+                                }
+                                $this->ack($queueName, $groupName, $this->idsAdd($ids, $id));
+                            } catch (\Throwable $throwable) {
+                                if ($this->ack($queueName, $groupName, $this->idsAdd($ids, $id))) {
+                                    // republish
+                                    $header->_count = $header->_count + 1;
+                                    $header->_error = $throwable->getMessage();
+                                    $header->_id    = '*';
+                                    $this->requeue($body, $header->toArray());
+                                }
                             }
                         }
+                        // del
+                        if($del) { $client->xDel($queueName, $ids); }
                     }
-                    // del
-                    if($del) { $client->xDel($queueName, $ids); }
                 }
             }
         }catch (RedisException $exception) {
