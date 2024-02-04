@@ -11,6 +11,8 @@ trait MessageQueueMethod
 {
     use MessageTempMethod;
 
+    protected array $claimStartTags = [];
+
     /**
      * @param string|null $queueName
      * @return array
@@ -222,30 +224,28 @@ trait MessageQueueMethod
                 $datas = $client->xAutoClaim(
                     $queueName, $groupName, $consumerName,
                     $pendingTimeout * 1000,
-                    '0-0', -1
+                    $this->claimStartTags[$queueName][$groupName][$consumerName] ?? '0-0', -1
                 );
-                foreach ($datas as $k => $v) {
-                    if (!$v or $v === '0-0') {
-                        unset($datas[$k]);
-                    }
-                }
                 if ($datas) {
-                    if ($client->xAck($queueName, $groupName, $datas)) {
-                        // pending超时的消息自动ack，并存入本地缓存
-                        try {
-                            foreach ($datas as $message) {
-                                $header = new Headers($message['_header']);
-                                $body = $message['_body'];
-                                $this->tempInsert('pending', $queueName, $message);
-                                $this->requeue($body, $header->toArray());
+                    $this->claimStartTags[$queueName][$groupName][$consumerName] = $datas[0] ?? '0-0';
+                    if ($datas = $datas[2] ?? []) {
+                        if ($client->xAck($queueName, $groupName, $datas)) {
+                            // pending超时的消息自动ack，并存入本地缓存
+                            try {
+                                foreach ($datas as $message) {
+                                    $header = new Headers($message['_header']);
+                                    $body = $message['_body'];
+                                    $this->tempInsert('pending', $queueName, $message);
+                                    $this->requeue($body, $header->toArray());
+                                }
                             }
-                        }
-                        // 忽略失败
-                        catch (\Throwable) {}
+                                // 忽略失败
+                            catch (\Throwable) {}
 
-                        if ($autoDel) {
-                            // 移除
-                            $client->xDel($queueName, array_keys($datas));
+                            if ($autoDel) {
+                                // 移除
+                                $client->xDel($queueName, array_keys($datas));
+                            }
                         }
                     }
                 }
