@@ -317,17 +317,28 @@ composer require workbunny/webman-rqueue
 
 ```php
 use function Workbunny\WebmanRqueue\sync_publish;
+use function Workbunny\WebmanRqueue\sync_publish_get_ids;
 use process\workbunny\rqueue\TestBuilder;
 
-# 使用函数发布
+# 使用函数发布，返回受影响条数，多队列不具备事务一致
 /** headers参数详见 @link Header */
 sync_publish(TestBuilder::instance(), 'abc', [
 	'_delete' => false
 ]);
 
-# 使用对象发布
+# 使用对象发布，返回受影响条数，多队列不具备事务一致
 /** headers参数详见 @link Header */
 TestBuilder::instance()->publish('abc', [
+	'_delete' => false
+]);
+
+# 返回消息ID组(数组)，多队列不具备事务一致
+sync_publish_get_ids(TestBuilder::instance(), 'abc', [
+	'_delete' => false
+]);
+
+# 返回消息ID组(数组)，多队列不具备事务一致
+TestBuilder::instance()->publishGetIds('abc', [
 	'_delete' => false
 ]);
 ```
@@ -335,18 +346,30 @@ TestBuilder::instance()->publish('abc', [
 #### 发布延迟消息
 
 **注：向延迟队列发布普通消息会抛出一个 WebmanRqueueException 异常**
+**注：延迟队列发布消息不支持指定消息id**
 
 ```php
 use function Workbunny\WebmanRqueue\sync_publish;
+use function Workbunny\WebmanRqueue\sync_publish_get_ids;
 use process\workbunny\rqueue\TestBuilder;
 
-# 延迟10ms
+# 延迟10ms，返回受影响条数，多队列不具备事务一致
 sync_publish(TestBuilder::instance(), 'abc', [
 	'_delay' => 10
 ]);
 
-# 延迟10ms
+# 延迟10ms，返回受影响条数，多队列不具备事务一致
 TestBuilder::instance()->publish('abc', [
+	'_delay' => 10
+]);
+
+# 延迟10ms，返回消息ID组(数组)，多队列不具备事务一致
+sync_publish_get_ids(TestBuilder::instance(), 'abc', [
+	'_delay' => 10
+]);
+
+# 延迟10ms，返回消息ID组(数组)，多队列不具备事务一致
+TestBuilder::instance()->publishGetIds('abc', [
 	'_delay' => 10
 ]);
 ```
@@ -356,6 +379,8 @@ TestBuilder::instance()->publish('abc', [
 - **生产可用，欢迎 [issue](https://github.com/workbunny/webman-rqueue/issues) 和 PR**；
 
 - **Redis Stream** 本身没有 **delayed** 或 **non-delayed** 之分，组件代码将它们区分的原因是不希望 **delayed** 被滥用；开发者应该明确哪些消息是延迟的、哪些是立即的，并且明确体现，也方便维护，因为延迟消息过多会导致消息堆积，从而占用Redis过多的资源；
+
+- 延迟队列是通过对消息的不断读取放回并且加以判断是否达到延迟触发时间来进行模拟延迟触发的效果，消息不支持指定id，请在逻辑内自行实现；
 
 - **Redis Stream** 的持久化依赖 **Redis** 本身的持久化策略，在一定情况下 **Redis Stream** 也并非是可靠型的消息队列;关于持久化相关内容，请仔细阅读 **[Redis中文文档](http://www.redis.cn/topics/persistence.html)**；
 
