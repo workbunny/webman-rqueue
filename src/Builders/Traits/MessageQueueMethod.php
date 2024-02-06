@@ -381,12 +381,15 @@ trait MessageQueueMethod
                             }
                             $this->ack($queueName, $groupName, $this->idsAdd($ids, $id));
                         } catch (\Throwable $throwable) {
-                            if ($this->ack($queueName, $groupName, $this->idsAdd($ids, $id))) {
-                                // republish
-                                $header->_count = $header->_count + 1;
-                                $header->_error = $throwable->getMessage();
-                                $header->_id    = '*';
-                                $this->requeue($body, $header->toArray());
+                            // republish
+                            $header->_count = $header->_count + 1;
+                            $header->_error = $throwable->getMessage();
+                            // republish都将刷新使用redis stream自身的id，自定义id无效
+                            $header->_id    = '*';
+                            if ($this->requeue($body, $header->toArray())) {
+                                if (!$this->ack($queueName, $groupName, $this->idsAdd($ids, $id))) {
+                                    $this->idsDel($ids, $id);
+                                }
                             }
                         }
                     }

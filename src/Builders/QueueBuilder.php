@@ -88,19 +88,6 @@ abstract class QueueBuilder extends AbstractBuilder
     public function onWorkerReload(Worker $worker): void
     {}
 
-    /**
-     * @param array $ids
-     * @param string $id
-     * @return array
-     */
-    public function idsAdd(array &$ids, string $id): array
-    {
-        if($this->getHeader()->_delete) {
-            $ids[] = $id;
-        }
-        return [$id];
-    }
-
     /** @inheritDoc */
     public static function classContent(string $namespace, string $className, bool $isDelay): string
     {

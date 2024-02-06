@@ -166,6 +166,33 @@ abstract class AbstractBuilder
     }
 
     /**
+     * @param array $ids
+     * @param string $id
+     * @return array
+     */
+    public function idsAdd(array &$ids, string $id): array
+    {
+        if($this->getHeader()->_delete) {
+            $ids[] = $id;
+        }
+        return [$id];
+    }
+
+    /**
+     * @param array $ids
+     * @param string $id
+     * @return void
+     */
+    public function idsDel(array &$ids, string $id): void
+    {
+        if($this->getHeader()->_delete) {
+            if ($key = array_search($id, $ids)) {
+                unset($ids[$key]);
+            }
+        }
+    }
+
+    /**
      * @return Headers|null
      */
     public function getHeader(): ?Headers
