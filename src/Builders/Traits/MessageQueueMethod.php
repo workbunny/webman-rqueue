@@ -154,9 +154,10 @@ trait MessageQueueMethod
      * @param string $queueName
      * @param string $groupName
      * @param array $id
+     * @param bool $retry
      * @return bool
      */
-    public function ack(string $queueName, string $groupName, array $id): bool
+    public function ack(string $queueName, string $groupName, array $id, bool $retry = false): bool
     {
         try {
             $this->getConnection()->client()->xAck($queueName, $groupName, $id);
@@ -165,6 +166,26 @@ trait MessageQueueMethod
             $this->getLogger()?->warning('Ack failed. ', [
                 'queue' => $queueName, 'group' => $groupName, 'id' => $id
             ]);
+        }
+        if ($retry) {
+            // 阻塞当前进程，重试
+            $sleep = 250 * 1000;
+            $index = 2;
+            $max = 5 * 60 * 1000 * 1000;
+            while (1) {
+                // 日志
+                $this->getLogger()?->warning($message = __CLASS__ . "| Consumer blocking-retry! [usleep: $sleep] ", [
+                    'queue' => $queueName, 'group' => $groupName, 'id' => $id, 'sleep' => $sleep
+                ]);
+                // 输出
+                echo $message . PHP_EOL;
+                // 每次阻塞指数倍数上升，最大max
+                usleep($sleep);
+                $sleep = min(($sleep * $index), $max);
+                if ($this->ack($queueName, $groupName, $id)) {
+                    break;
+                }
+            }
         }
         return false;
     }
@@ -269,6 +290,7 @@ trait MessageQueueMethod
                 $this->getLogger()?->debug($exception->getMessage(), $exception->getTrace());
                 if (isset($data)) {
                     $this->tempInsert('requeue', $queue, $data);
+                    echo 'temp requeue insert' . PHP_EOL;
                 }
             }
         }
@@ -305,6 +327,7 @@ trait MessageQueueMethod
                                     $header = new Headers($message['_header']);
                                     $body = $message['_body'];
                                     $this->tempInsert('pending', $queueName, $message);
+                                    echo 'temp pending insert' . PHP_EOL;
                                     $this->requeue($body, $header->toArray());
                                 }
                             }
@@ -366,11 +389,14 @@ trait MessageQueueMethod
                             $this->getBuilderConfig()->isDelayed() and $header->_delay > 0 and
                             (($header->_delay / 1000 + $header->_timestamp) - microtime(true)) > 0
                         ){
-                            // ack
-                            if ($this->ack($queueName, $groupName, $this->idsAdd($ids, $id))) {
-                                // republish
-                                $header->_id = '*';
-                                $this->requeue($body, $header->toArray());
+                            // republish
+                            $header->_id = '*';
+                            if ($this->requeue($body, $header->toArray())) {
+                                // blocking-retry ack
+                                $this->ack($queueName, $groupName, $this->idsAdd($ids, $id), true);
+//                                if (!$this->ack($queueName, $groupName, $this->idsAdd($ids, $id))) {
+//                                    $this->idsDel($ids, $id);
+//                                }
                             }
                             continue;
                         }
@@ -387,9 +413,11 @@ trait MessageQueueMethod
                             // republish都将刷新使用redis stream自身的id，自定义id无效
                             $header->_id    = '*';
                             if ($this->requeue($body, $header->toArray())) {
-                                if (!$this->ack($queueName, $groupName, $this->idsAdd($ids, $id))) {
-                                    $this->idsDel($ids, $id);
-                                }
+                                // blocking-retry ack
+                                $this->ack($queueName, $groupName, $this->idsAdd($ids, $id), true);
+//                                if (!$this->ack($queueName, $groupName, $this->idsAdd($ids, $id))) {
+//                                    $this->idsDel($ids, $id);
+//                                }
                             }
                         }
                     }
@@ -397,7 +425,7 @@ trait MessageQueueMethod
                     if($del) { $client->xDel($queueName, $ids); }
                 }
             }
-        }catch (RedisException $exception) {
+        } catch (RedisException $exception) {
             $this->getLogger()?->debug($exception->getMessage(), $exception->getTrace());
             throw new WebmanRqueueException($exception->getMessage(), $exception->getCode(), $exception);
         }
