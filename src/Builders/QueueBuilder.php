@@ -5,6 +5,7 @@ namespace Workbunny\WebmanRqueue\Builders;
 use Illuminate\Redis\Connections\Connection;
 use Psr\Log\LoggerInterface;
 use RedisException;
+use support\Log;
 use Workbunny\WebmanRqueue\Builders\Traits\MessageQueueMethod;
 use Workbunny\WebmanRqueue\Exceptions\WebmanRqueueException;
 use Workerman\Timer;
@@ -61,6 +62,12 @@ abstract class QueueBuilder extends AbstractBuilder
                     // consume
                     $this->consume($worker, true);
                 } catch (WebmanRqueueException $exception) {
+                    Log::channel('plugin.workbunny.webman-rqueue.warning')?->warning('Consume exception. ', [
+                        'message' => $exception->getMessage(), 'code' => $exception->getCode(),
+                        'file'  => $exception->getFile() . ':' . $exception->getLine(),
+                        'trace' => $exception->getTrace()
+                    ]);
+                    // 兼容旧版
                     $this->getLogger()?->warning('Consume exception. ', [
                         'message' => $exception->getMessage(), 'code' => $exception->getCode()
                     ]);

@@ -3,6 +3,7 @@
 namespace Workbunny\WebmanRqueue\Builders\Traits;
 
 use RedisException;
+use support\Log;
 use Workbunny\WebmanRqueue\Exceptions\WebmanRqueueException;
 use Workbunny\WebmanRqueue\Headers;
 use Workerman\Worker;
@@ -163,7 +164,13 @@ trait MessageQueueMethod
             $this->getConnection()->client()->xAck($queueName, $groupName, $id);
             return true;
         } catch (RedisException) {
-            $this->getLogger()?->warning('Ack failed. ', [
+            Log::channel('plugin.workbunny.webman-rqueue.warning')?->warning("Ack failed [$queueName->$groupName]. ", [
+                'message' => $exception->getMessage(), 'code' => $exception->getCode(),
+                'file'  => $exception->getFile() . ':' . $exception->getLine(),
+                'trace' => $exception->getTrace(), 'ids' => $id
+            ]);
+            // 兼容旧版
+            $this->getLogger()?->warning("Ack failed. ", [
                 'queue' => $queueName, 'group' => $groupName, 'id' => $id
             ]);
         }
@@ -173,8 +180,12 @@ trait MessageQueueMethod
             $index = 2;
             $max = 5 * 60 * 1000 * 1000;
             while (1) {
+                Log::channel('plugin.workbunny.webman-rqueue.notice')
+                    ->notice($message = __CLASS__ . "| Consumer blocking-retry! [usleep: $sleep] ", [
+                        'queue' => $queueName, 'group' => $groupName, 'id' => $id, 'sleep' => $sleep
+                    ]);
                 // 日志
-                $this->getLogger()?->warning($message = __CLASS__ . "| Consumer blocking-retry! [usleep: $sleep] ", [
+                $this->getLogger()?->notice($message, [
                     'queue' => $queueName, 'group' => $groupName, 'id' => $id, 'sleep' => $sleep
                 ]);
                 // 输出
@@ -236,6 +247,7 @@ trait MessageQueueMethod
             }
             return $ids;
         } catch (RedisException $exception) {
+            Log::channel('plugin.workbunny.webman-rqueue.debug')?->debug($exception->getMessage(), $exception->getTrace());
             $this->getLogger()?->debug($exception->getMessage(), $exception->getTrace());
             throw new WebmanRqueueException($exception->getMessage(), $exception->getCode(), $exception);
         }
@@ -287,6 +299,7 @@ trait MessageQueueMethod
                 }
                 $count ++;
             } catch (RedisException $exception) {
+                Log::channel('plugin.workbunny.webman-rqueue.debug')?->debug($exception->getMessage(), $exception->getTrace());
                 $this->getLogger()?->debug($exception->getMessage(), $exception->getTrace());
                 if (isset($data)) {
                     $this->tempInsert('requeue', $queue, $data);
@@ -343,6 +356,7 @@ trait MessageQueueMethod
                 }
             }
         } catch (RedisException $exception) {
+            Log::channel('plugin.workbunny.webman-rqueue.debug')?->debug($exception->getMessage(), $exception->getTrace());
             $this->getLogger()?->debug($exception->getMessage(), $exception->getTrace());
             throw new WebmanRqueueException($exception->getMessage(), $exception->getCode(), $exception);
         }
@@ -426,6 +440,7 @@ trait MessageQueueMethod
                 }
             }
         } catch (RedisException $exception) {
+            Log::channel('plugin.workbunny.webman-rqueue.debug')?->debug($exception->getMessage(), $exception->getTrace());
             $this->getLogger()?->debug($exception->getMessage(), $exception->getTrace());
             throw new WebmanRqueueException($exception->getMessage(), $exception->getCode(), $exception);
         }

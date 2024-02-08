@@ -56,6 +56,7 @@ abstract class AbstractBuilder
     private Connection $_connection;
 
     /**
+     * @deprecated
      * @var LoggerInterface|null
      */
     private ?LoggerInterface $_logger = null;
@@ -137,6 +138,7 @@ abstract class AbstractBuilder
     }
 
     /**
+     * @deprecated
      * @return LoggerInterface|null
      */
     public function getLogger(): ?LoggerInterface
@@ -145,6 +147,7 @@ abstract class AbstractBuilder
     }
 
     /**
+     * @deprecated
      * @param LoggerInterface|null $logger
      */
     public function setLogger(null|LoggerInterface $logger): void
