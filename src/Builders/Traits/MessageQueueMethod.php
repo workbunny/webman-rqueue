@@ -365,10 +365,10 @@ trait MessageQueueMethod
     /**
      * @param Worker $worker
      * @param bool $del
-     * @return void
+     * @return bool true:有消费 false:无消费
      * @throws WebmanRqueueException
      */
-    public function consume(Worker $worker, bool $del = true): void
+    public function consume(Worker $worker, bool $del = true): bool
     {
         try {
             $client = $this->getConnection()->client();
@@ -438,7 +438,9 @@ trait MessageQueueMethod
                     // del
                     if($del) { $client->xDel($queueName, $ids); }
                 }
+                return true;
             }
+            return false;
         } catch (RedisException $exception) {
             Log::channel('plugin.workbunny.webman-rqueue.debug')?->debug($exception->getMessage(), $exception->getTrace());
             $this->getLogger()?->debug($exception->getMessage(), $exception->getTrace());

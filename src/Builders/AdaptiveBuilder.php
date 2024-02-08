@@ -6,14 +6,19 @@ use Illuminate\Redis\Connections\Connection;
 use Psr\Log\LoggerInterface;
 use RedisException;
 use support\Log;
+use Workbunny\WebmanRqueue\Builders\Traits\AdaptiveTimerMethod;
 use Workbunny\WebmanRqueue\Builders\Traits\MessageQueueMethod;
 use Workbunny\WebmanRqueue\Exceptions\WebmanRqueueException;
 use Workerman\Timer;
 use Workerman\Worker;
-use function Workbunny\WebmanRqueue\config;
 
-abstract class GroupBuilder extends AbstractBuilder
+/**
+ * 自适应Builder
+ */
+abstract class AdaptiveBuilder extends AbstractBuilder
 {
+    use AdaptiveTimerMethod;
+
     /**
      * 配置
      *
@@ -27,9 +32,6 @@ abstract class GroupBuilder extends AbstractBuilder
      * ]
      */
     protected array $configs = [];
-
-    /** @var int|null 自动移除定时器 */
-    private static ?int $_delTimer = null;
 
     public function __construct(?LoggerInterface $logger = null)
     {
@@ -46,26 +48,24 @@ abstract class GroupBuilder extends AbstractBuilder
     /** @inheritDoc */
     public function onWorkerStart(Worker $worker): void
     {
+        // 初始化temp库
+        $this->tempInit();
         if($this->getConnection()){
-            // consume timer
-            self::setMainTimer(Timer::add($this->timerInterval / 1000, function () use ($worker) {
-                // del timer
-                self::$_delTimer = Timer::add($this->timerInterval, function() use ($worker) {
-                    // auto del
-                    $this->del();
-                });
-                // check pending
-                if (($pendingTimeout = $this->configs['pending_timeout'] ?? 0) > 0) {
-                    $this->setPendingTimer(Timer::add($pendingTimeout / 1000, function () use ($worker, $pendingTimeout) {
-                        // 超时消息自动ack并requeue，消息自动移除
-                        $this->claim($worker, $pendingTimeout);
-                    }));
-                }
+            // requeue timer
+            $this->tempRequeueInit();
+            // check pending
+            if (($pendingTimeout = $this->configs['pending_timeout'] ?? 0) > 0) {
+                $this->setPendingTimer(Timer::add($pendingTimeout / 1000, function () use ($worker, $pendingTimeout) {
+                    // 自动ack
+                    $this->claim($worker, $pendingTimeout);
+                }));
+            }
+            // main timer
+            $this->adaptiveTimerCreate($this->timerInterval / 1000, function () use($worker) {
                 try {
                     // consume
-                    $this->consume($worker, false);
+                    $this->consume($worker);
                 } catch (WebmanRqueueException $exception) {
-                    // 错误日志
                     Log::channel('plugin.workbunny.webman-rqueue.warning')?->warning('Consume exception. ', [
                         'message' => $exception->getMessage(), 'code' => $exception->getCode(),
                         'file'  => $exception->getFile() . ':' . $exception->getLine(),
@@ -75,9 +75,8 @@ abstract class GroupBuilder extends AbstractBuilder
                     $this->getLogger()?->warning('Consume exception. ', [
                         'message' => $exception->getMessage(), 'code' => $exception->getCode()
                     ]);
-
                 }
-            }));
+            });
         }
     }
 
@@ -91,21 +90,17 @@ abstract class GroupBuilder extends AbstractBuilder
                 echo $e->getMessage() . PHP_EOL;
             }
         }
-        if(self::getMainTimer()) {
-            Timer::del(self::getMainTimer());
-        }
-        if ($this->getPendingTimer()) {
+        // 移除自适应
+        $this->adaptiveTimerDelete();
+        //
+        if($this->getPendingTimer()) {
             Timer::del($this->getPendingTimer());
-        }
-        if(self::$_delTimer) {
-            Timer::del(self::$_delTimer);
         }
     }
 
     /** @inheritDoc */
     public function onWorkerReload(Worker $worker): void
     {}
-
 
     /** @inheritDoc */
     public static function classContent(string $namespace, string $className, bool $isDelay): string
@@ -118,10 +113,10 @@ abstract class GroupBuilder extends AbstractBuilder
 namespace $namespace;
 
 use Workbunny\WebmanRqueue\Headers;
-use Workbunny\WebmanRqueue\Builders\GroupBuilder;
+use Workbunny\WebmanRqueue\Builders\QueueBuilder;
 use Illuminate\Redis\Connections\Connection;
 
-class $className extends GroupBuilder
+class $className extends AdaptiveBuilder
 {
     
     /** @see QueueBuilder::\$configs */
@@ -131,7 +126,7 @@ class $className extends GroupBuilder
             '$name'
         ],
         // 默认由类名自动生成        
-        'group'           => '$name', 
+        'group'           => '$name',
         // 是否延迟         
         'delayed'         => $isDelay,
         // QOS    
@@ -139,7 +134,7 @@ class $className extends GroupBuilder
         // Queue size
         'queue_size'      => 0,
         // 消息pending超时，毫秒
-        'pending_timeout' => 0           
+        'pending_timeout' => 0             
     ];
     
     /** @var float|null 消费间隔 1ms */
@@ -147,6 +142,15 @@ class $className extends GroupBuilder
     
     /** @var string redis配置 */
     protected string \$connection = 'default';
+    
+     /** @var int 闲置阈值 ms */
+    protected int \$idleThreshold = 0;
+
+    /** @var int 退避指数 */
+    protected int \$avoidIndex = 0;
+
+    /** @var float 最大定时器间隔 ms */
+    protected float \$maxTimerInterval = 0.0;
     
     /** @inheritDoc */
     public function handler(string \$id, array \$value, Connection \$connection): bool 

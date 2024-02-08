@@ -13,7 +13,6 @@ use Workerman\Worker;
 
 abstract class QueueBuilder extends AbstractBuilder
 {
-    use MessageQueueMethod;
 
     /**
      * 配置
@@ -52,15 +51,15 @@ abstract class QueueBuilder extends AbstractBuilder
             // check pending
             if (($pendingTimeout = $this->configs['pending_timeout'] ?? 0) > 0) {
                 $this->setPendingTimer(Timer::add($pendingTimeout / 1000, function () use ($worker, $pendingTimeout) {
-                    // 自动ack
-                    $this->claim($worker, $pendingTimeout, false);
+                    // 超时消息自动ack并requeue，消息自动移除
+                    $this->claim($worker, $pendingTimeout);
                 }));
             }
             // main timer
             $this->setMainTimer(Timer::add($this->timerInterval / 1000, function () use($worker) {
                 try {
                     // consume
-                    $this->consume($worker, true);
+                    $this->consume($worker);
                 } catch (WebmanRqueueException $exception) {
                     Log::channel('plugin.workbunny.webman-rqueue.warning')?->warning('Consume exception. ', [
                         'message' => $exception->getMessage(), 'code' => $exception->getCode(),

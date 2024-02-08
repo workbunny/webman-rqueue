@@ -6,6 +6,7 @@ use Illuminate\Redis\Connections\Connection;
 use Psr\Log\LoggerInterface;
 use support\Redis;
 use Workbunny\WebmanRqueue\BuilderConfig;
+use Workbunny\WebmanRqueue\Builders\Traits\AdaptiveTimerMethod;
 use Workbunny\WebmanRqueue\Builders\Traits\MessageQueueMethod;
 use Workbunny\WebmanRqueue\Builders\Traits\MessageTempMethod;
 use Workbunny\WebmanRqueue\Commands\AbstractCommand;
