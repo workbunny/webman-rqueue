@@ -1,12 +1,14 @@
 <?php declare(strict_types=1);
 
+use function Workbunny\WebmanRqueue\runtime_path;
+
 return [
     'warning' => [
         'handlers' => [
             [
                 'class' => Monolog\Handler\RotatingFileHandler::class,
                 'constructor' => [
-                    \runtime_path() . '/logs/workbunny/webman-rqueue/warning.log',
+                    runtime_path() . '/logs/workbunny/webman-rqueue/warning.log',
                     10, //$maxFiles
                     Monolog\Logger::WARNING,
                 ],
@@ -22,7 +24,7 @@ return [
             [
                 'class' => Monolog\Handler\RotatingFileHandler::class,
                 'constructor' => [
-                    \runtime_path() . '/logs/workbunny/webman-rqueue/notice.log',
+                    runtime_path() . '/logs/workbunny/webman-rqueue/notice.log',
                     10, //$maxFiles
                     Monolog\Logger::NOTICE,
                 ],
@@ -38,7 +40,7 @@ return [
             [
                 'class' => Monolog\Handler\RotatingFileHandler::class,
                 'constructor' => [
-                    \runtime_path() . '/logs/workbunny/webman-rqueue/debug.log',
+                    runtime_path() . '/logs/workbunny/webman-rqueue/debug.log',
                     10, //$maxFiles
                     Monolog\Logger::DEBUG,
                 ],
