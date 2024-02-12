@@ -7,7 +7,6 @@ use Psr\Log\LoggerInterface;
 use RedisException;
 use support\Log;
 use Workbunny\WebmanRqueue\Builders\Traits\AdaptiveTimerMethod;
-use Workbunny\WebmanRqueue\Builders\Traits\MessageQueueMethod;
 use Workbunny\WebmanRqueue\Exceptions\WebmanRqueueException;
 use Workerman\Timer;
 use Workerman\Worker;
@@ -64,7 +63,7 @@ abstract class AdaptiveBuilder extends AbstractBuilder
             $this->adaptiveTimerCreate($this->timerInterval / 1000, function () use($worker) {
                 try {
                     // consume
-                    $this->consume($worker);
+                   return $this->consume($worker);
                 } catch (WebmanRqueueException $exception) {
                     Log::channel('plugin.workbunny.webman-rqueue.warning')?->warning('Consume exception. ', [
                         'message' => $exception->getMessage(), 'code' => $exception->getCode(),
@@ -76,6 +75,7 @@ abstract class AdaptiveBuilder extends AbstractBuilder
                         'message' => $exception->getMessage(), 'code' => $exception->getCode()
                     ]);
                 }
+                return false;
             });
         }
     }
@@ -86,16 +86,16 @@ abstract class AdaptiveBuilder extends AbstractBuilder
         if($this->getConnection()) {
             try {
                 $this->getConnection()->client()->close();
-            }catch (RedisException $e) {
+            } catch (RedisException $e) {
                 echo $e->getMessage() . PHP_EOL;
             }
         }
-        // 移除自适应
-        $this->adaptiveTimerDelete();
-        //
+        // 移除pending检查定时器
         if($this->getPendingTimer()) {
             Timer::del($this->getPendingTimer());
         }
+        // 移除自适应
+        $this->adaptiveTimerDelete();
     }
 
     /** @inheritDoc */

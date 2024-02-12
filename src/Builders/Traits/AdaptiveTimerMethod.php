@@ -139,6 +139,7 @@ trait AdaptiveTimerMethod
             EventInterface::EV_TIMER,
             $callback = function (...$args) use ($func, $millisecond, $id, &$callback)
             {
+                // 获取毫秒时间戳
                 $nowMilliTimestamp = intval(microtime(true) * 1000);
                 if (\call_user_func($func, ...$args)) {
                     self::$lastMessageMilliTimestamp = $nowMilliTimestamp;
