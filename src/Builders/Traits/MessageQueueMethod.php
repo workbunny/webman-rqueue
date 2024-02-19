@@ -242,7 +242,7 @@ trait MessageQueueMethod
                     '_header' => $header->toString(),
                     '_body'   => $body,
                 ])) {
-                    $ids[] = $id;
+                    $ids[$queue] = $id;
                 }
             }
             return $ids;
