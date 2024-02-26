@@ -20,6 +20,20 @@ trait MessageTempMethod
         'requeue', 'pending', 'error'
     ];
 
+    /**
+     * 注册本地table
+     * @param string $table
+     * @return bool
+     */
+    public function tempTableRegister(string $table): bool
+    {
+        if (!in_array($table, self::$_tables)) {
+            self::$_tables[] = $table;
+            return true;
+        }
+        return false;
+    }
+
 
     /**
      * 初始化temp
