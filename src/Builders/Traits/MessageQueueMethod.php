@@ -423,7 +423,7 @@ trait MessageQueueMethod
                         } catch (\Throwable $throwable) {
                             // republish
                             $header->_count = $header->_count + 1;
-                            $header->_error = $throwable->getMessage();
+                            $header->_error = "{$throwable->getMessage()} [{$throwable->getFile()}:{$throwable->getLine()}]";
                             // republish都将刷新使用redis stream自身的id，自定义id无效
                             $header->_id    = '*';
                             if ($this->requeue($body, $header->toArray())) {
