@@ -17,7 +17,7 @@ trait MessageTempMethod
     protected ?int $_requeueTimer = null;
 
     protected static array $_tables = [
-        'requeue', 'pending'
+        'requeue', 'pending', 'error'
     ];
 
 
