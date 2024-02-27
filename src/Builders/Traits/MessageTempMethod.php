@@ -57,13 +57,15 @@ trait MessageTempMethod
             $builder = Db::schema('plugin.workbunny.webman-rqueue.local-storage');
             foreach (self::$_tables as $table) {
                 if (!$builder->hasTable($table)) {
-                    $builder->create($table, function (Blueprint $table) {
-                        $table->id();
-                        $table->string('queue');
-                        $table->json('data');
-                        $table->integer('create_at');
-                    });
-                    echo "local-storage db $table-table created. " . PHP_EOL;
+                    try {
+                        $builder->create($table, function (Blueprint $table) {
+                            $table->id();
+                            $table->string('queue');
+                            $table->json('data');
+                            $table->integer('create_at');
+                        });
+                        echo "local-storage db $table-table created. " . PHP_EOL;
+                    } catch (\Throwable) {}
                 }
             }
         }
