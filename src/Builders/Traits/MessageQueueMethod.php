@@ -320,6 +320,12 @@ trait MessageQueueMethod
     {
         try {
             $client = $this->getConnection()->client();
+            if (!method_exists($client, 'xAutoClaim')) {
+                Log::channel('plugin.workbunny.webman-rqueue.warning')->warning(
+                    'Method xAutoClaim requires redis-server >= 6.2.0. '
+                );
+                return;
+            }
             $builderConfig = $this->getBuilderConfig();
             $queues = $builderConfig->getQueues();
             $groupName = $builderConfig->getGroup();
