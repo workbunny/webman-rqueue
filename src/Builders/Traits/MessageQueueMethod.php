@@ -7,6 +7,7 @@ use support\Log;
 use Workbunny\WebmanRqueue\Exceptions\WebmanRqueueException;
 use Workbunny\WebmanRqueue\Headers;
 use Workerman\Worker;
+use function Workbunny\WebmanRqueue\config;
 
 trait MessageQueueMethod
 {
@@ -242,7 +243,7 @@ trait MessageQueueMethod
                     '_header' => $header->toString(),
                     '_body'   => $body,
                 ])) {
-                    $ids[] = $id;
+                    $ids[$queue] = $id;
                 }
             }
             return $ids;
@@ -429,15 +430,30 @@ trait MessageQueueMethod
                         } catch (\Throwable $throwable) {
                             // republish
                             $header->_count = $header->_count + 1;
-                            $header->_error = $throwable->getMessage();
+                            $header->_error = "{$throwable->getMessage()} [{$throwable->getFile()}:{$throwable->getLine()}]";
                             // republish都将刷新使用redis stream自身的id，自定义id无效
                             $header->_id    = '*';
-                            if ($this->requeue($body, $header->toArray())) {
-                                // blocking-retry ack
-                                $this->ack($queueName, $groupName, $this->idsAdd($ids, $id), true);
+                            // 如果错误超过error max count，则存入本地error表
+                            if (
+                                ($errorMaxCount = config('plugin.workbunny.webman-rqueue.app.error_max_count', 0)) > 0 and
+                                $header->_count >= $errorMaxCount
+                            ) {
+                                // 存入
+                                if ($this->tempInsert('error', $queueName, [
+                                    '_header' => $header->toArray(),
+                                    '_body'   => $body
+                                ])) {
+                                    // blocking-retry ack
+                                    $this->ack($queueName, $groupName, $this->idsAdd($ids, $id), true);
+                                }
+                            } else {
+                                if ($this->requeue($body, $header->toArray())) {
+                                    // blocking-retry ack
+                                    $this->ack($queueName, $groupName, $this->idsAdd($ids, $id), true);
 //                                if (!$this->ack($queueName, $groupName, $this->idsAdd($ids, $id))) {
 //                                    $this->idsDel($ids, $id);
 //                                }
+                                }
                             }
                         }
                     }
