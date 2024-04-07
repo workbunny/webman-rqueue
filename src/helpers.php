@@ -16,9 +16,9 @@ use Workbunny\WebmanRqueue\Exceptions\WebmanRqueueException;
  * @return int|false
  * @throws WebmanRqueueException
  */
-function sync_publish(AbstractBuilder $builder, string $body, array $headers = []) : int|false
+function sync_publish(AbstractBuilder $builder, string $body, array $headers = [], bool $temp = false) : int|false
 {
-    return $builder->publish($body, $headers);
+    return $builder->publish($body, $headers, temp: $temp);
 }
 
 /**
@@ -26,11 +26,13 @@ function sync_publish(AbstractBuilder $builder, string $body, array $headers = [
  * @param QueueBuilder $builder
  * @param string $body
  * @param array $headers
+ * @param bool $temp
  * @return array
+ * @throws WebmanRqueueException
  */
-function sync_publish_get_ids(AbstractBuilder $builder, string $body, array $headers = []) : array
+function sync_publish_get_ids(AbstractBuilder $builder, string $body, array $headers = [], bool $temp = false) : array
 {
-    return $builder->publishGetIds($body, $headers);
+    return $builder->publishGetIds($body, $headers, temp: $temp);
 }
 
 /**

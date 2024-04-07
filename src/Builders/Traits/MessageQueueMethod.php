@@ -211,9 +211,10 @@ trait MessageQueueMethod
      *  @see Headers
      * ]
      * @param string|null $queueName
+     * @param bool $temp
      * @return array 返回成功的消息ID组
      */
-    public function publishGetIds(string $body, array $headers = [], null|string $queueName = null): array
+    public function publishGetIds(string $body, array $headers = [], null|string $queueName = null, bool $temp = false): array
     {
         $client = $this->getConnection()->client();
         $header = new Headers($headers);
@@ -239,11 +240,16 @@ trait MessageQueueMethod
                         throw new WebmanRqueueException('Queue size exceeded.');
                     }
                 }
-                if ($id = $client->xAdd($queue, (string)$header->_id, [
+                if ($id = $client->xAdd($queue, (string)$header->_id, $data = [
                     '_header' => $header->toString(),
                     '_body'   => $body,
                 ])) {
                     $ids[$queue] = $id;
+                } else {
+                    if ($temp) {
+                        $this->tempInsert('requeue', $queue, $data);
+                        $ids["<temp>$queue</temp>"] = $id;
+                    }
                 }
             }
             return $ids;
@@ -260,14 +266,15 @@ trait MessageQueueMethod
      *
      * @param string $body
      * @param array $headers = [
-     *  @param string|null $queueName
-     * @return int|false 0/false 代表全部失败
-     *@see Headers
+     *  @see Headers
      * ]
+     * @param string|null $queueName
+     * @param bool $temp
+     * @return int|false 0/false 代表全部失败
      */
-    public function publish(string $body, array $headers = [], null|string $queueName = null): int|false
+    public function publish(string $body, array $headers = [], null|string $queueName = null , bool $temp = false): int|false
     {
-        return count($this->publishGetIds($body, $headers, $queueName));
+        return count($this->publishGetIds($body, $headers, $queueName, $temp));
     }
 
     /**
