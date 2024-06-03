@@ -397,9 +397,11 @@ trait MessageQueueMethod
             if (!$this->_init) {
                 foreach ($queues as $queueName) {
                     $client->xGroup('CREATE', $queueName, $groupName,'0', true);
-                    $queueStreams[$queueName] = '>';
                 }
                 $this->_init = true;
+            }
+            foreach ($queues as $queueName) {
+                $queueStreams[$queueName] = '>';
             }
             // group read
             if($res = $client->xReadGroup(
