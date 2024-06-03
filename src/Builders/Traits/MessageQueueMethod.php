@@ -15,6 +15,8 @@ trait MessageQueueMethod
 
     protected array $claimStartTags = [];
 
+    protected bool $_init = false;
+
     /**
      * @param string|null $queueName
      * @return array
@@ -392,9 +394,12 @@ trait MessageQueueMethod
             $consumerName = "$groupName-$worker->id";
             // create group
             $queueStreams = [];
-            foreach ($queues as $queueName) {
-                $client->xGroup('CREATE', $queueName, $groupName,'0', true);
-                $queueStreams[$queueName] = '>';
+            if (!$this->_init) {
+                foreach ($queues as $queueName) {
+                    $client->xGroup('CREATE', $queueName, $groupName,'0', true);
+                    $queueStreams[$queueName] = '>';
+                }
+                $this->_init = true;
             }
             // group read
             if($res = $client->xReadGroup(
@@ -473,6 +478,7 @@ trait MessageQueueMethod
         } catch (RedisException $exception) {
             Log::channel('plugin.workbunny.webman-rqueue.debug')?->debug($exception->getMessage(), $exception->getTrace());
             $this->getLogger()?->debug($exception->getMessage(), $exception->getTrace());
+            $this->_init = false;
             throw new WebmanRqueueException($exception->getMessage(), $exception->getCode(), $exception);
         }
     }
