@@ -21,8 +21,8 @@ trait AdaptiveTimerMethod
     /** @var float|null 定时器最初间隔 */
     private float|null $timerInitialInterval = null;
 
-    /** @var int|null 最后一次获取消息的毫秒时间戳 */
-    private static ?int $lastMessageMilliTimestamp = null;
+    /** @var int 最后一次获取消息的毫秒时间戳 */
+    private static int $lastMessageMilliTimestamp = 0;
 
     /** @var bool 是否到达最大间隔 */
     private static bool $isMaxTimerInterval = false;
@@ -132,8 +132,6 @@ trait AdaptiveTimerMethod
         if (!Worker::$globalEvent) {
             throw new WebmanRqueueException("Event driver error. ", -1);
         }
-        // 初始化上一次获取信息的毫秒时间戳
-        self::$lastMessageMilliTimestamp = self::$lastMessageMilliTimestamp ?? intval(microtime(true) * 1000);
         // 增加定时器
         $id = spl_object_hash($func);
         self::$timerIdMap[$id] = Worker::$globalEvent->add(
