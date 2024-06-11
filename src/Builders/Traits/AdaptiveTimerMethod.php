@@ -18,6 +18,9 @@ trait AdaptiveTimerMethod
     /** @var float 最大定时器间隔 ms */
     protected float $maxTimerInterval = 0.0;
 
+    /** @var float|null 定时器最初间隔 */
+    private float|null $timerInitialInterval = null;
+
     /** @var int|null 最后一次获取消息的毫秒时间戳 */
     private static ?int $lastMessageMilliTimestamp = null;
 
@@ -120,12 +123,11 @@ trait AdaptiveTimerMethod
     /**
      * 添加自适应退避定时器
      *
-     * @param int $millisecond
      * @param Closure $func
      * @param mixed ...$args
      * @return string
      */
-    public function adaptiveTimerCreate(int $millisecond, Closure $func, mixed ...$args): string
+    public function adaptiveTimerCreate(Closure $func, mixed ...$args): string
     {
         if (!Worker::$globalEvent) {
             throw new WebmanRqueueException("Event driver error. ", -1);
@@ -135,33 +137,57 @@ trait AdaptiveTimerMethod
         // 增加定时器
         $id = spl_object_hash($func);
         self::$timerIdMap[$id] = Worker::$globalEvent->add(
-            $millisecond / 1000,
+            $this->timerInitialInterval = $this->getTimerInterval(),
             EventInterface::EV_TIMER,
-            $callback = function (...$args) use ($func, $millisecond, $id, &$callback)
+            $callback = function (...$args) use ($func, $id, &$callback)
             {
                 // 获取毫秒时间戳
                 $nowMilliTimestamp = intval(microtime(true) * 1000);
-                if (\call_user_func($func, ...$args)) {
-                    self::$lastMessageMilliTimestamp = $nowMilliTimestamp;
-                    self::$isMaxTimerInterval = false;
-                }
-                if (
-                    // 设置了闲置阈值、退避指数、最大时间间隔大于定时器初始时间间隔
-                    $this->avoidIndex > 0 and $this->idleThreshold and $this->maxTimerInterval > $millisecond and
-                    // 闲置超过闲置阈值
-                    $nowMilliTimestamp - self::$lastMessageMilliTimestamp > $this->avoidIndex and
-                    // 非最大间隔
-                    !self::$isMaxTimerInterval
-                ) {
-                    $interval = min($this->avoidIndex * $millisecond, $this->maxTimerInterval);
-                    // 如果到达最大值
-                    if ($interval >= $this->maxTimerInterval) {
-                        self::$isMaxTimerInterval = true;
+                // 是否开启
+                $enable = ($this->avoidIndex > 0 and $this->idleThreshold and $this->maxTimerInterval > $this->timerInitialInterval);
+                // 执行业务逻辑
+                try {
+                    if ($res = \call_user_func($func, ...$args)) {
+                        // 设置最后一条执行时间
+                        self::$lastMessageMilliTimestamp = $nowMilliTimestamp;
                     }
-                    // 移除之前的定时器
-                    Worker::$globalEvent->del(self::$timerIdMap[$id], EventInterface::EV_TIMER);
-                    // 新建定时器
-                    self::$timerIdMap[$id] = Worker::$globalEvent->add($interval, EventInterface::EV_TIMER, $callback);
+                } catch (\Throwable){
+                    $res = false;
+                }
+                // 如果自适应开启
+                if ($enable) {
+                    // 有消费
+                    if ($res) {
+                        // 归零
+                        self::$isMaxTimerInterval = false;
+                        // 初始化间隔与间隔不相同则需要重新设置定时时间
+                        $setTimer = $this->getTimerInterval() !== $this->timerInitialInterval;
+                        // 定时器初始化
+                        $this->setTimerInterval($this->timerInitialInterval);
+                    }
+                    // 无消费
+                    else {
+                        $setTimer = false;
+                        if (
+                            $nowMilliTimestamp - self::$lastMessageMilliTimestamp > $this->avoidIndex and // 闲置超过闲置阈值
+                            !self::$isMaxTimerInterval // 非最大间隔
+                        ) {
+                            $interval = min($this->avoidIndex * $millisecond, $this->maxTimerInterval);
+                            // 如果到达最大值
+                            if ($interval >= $this->maxTimerInterval) {
+                                self::$isMaxTimerInterval = true;
+                            }
+                            $setTimer = true;
+                            $this->setTimerInterval($interval);
+                        }
+                    }
+                    // 是否需要设置定时器
+                    if ($setTimer) {
+                        // 移除之前的定时器
+                        Worker::$globalEvent->del(self::$timerIdMap[$id], EventInterface::EV_TIMER);
+                        // 新建定时器
+                        self::$timerIdMap[$id] = Worker::$globalEvent->add($this->getTimerInterval(), EventInterface::EV_TIMER, $callback);
+                    }
                 }
             },
             $args

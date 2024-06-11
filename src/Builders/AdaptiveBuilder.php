@@ -60,7 +60,7 @@ abstract class AdaptiveBuilder extends AbstractBuilder
                 }));
             }
             // main timer
-            $this->adaptiveTimerCreate($this->timerInterval / 1000, function () use($worker) {
+            $this->adaptiveTimerCreate(function () use($worker) {
                 try {
                     // consume
                    return $this->consume($worker);
