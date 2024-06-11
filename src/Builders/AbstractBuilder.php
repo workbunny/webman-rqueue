@@ -139,6 +139,25 @@ abstract class AbstractBuilder
     }
 
     /**
+     * 设置定时器间隔 ms
+     * @param float $ms
+     * @return void
+     */
+    public function setTimerInterval(float $ms): void
+    {
+        $this->timerInterval = $ms;
+    }
+
+    /**
+     * 获取定时器间隔 ms
+     * @return float|null
+     */
+    public function getTimerInterval(): null|float
+    {
+        return $this->timerInterval;
+    }
+
+    /**
      * @deprecated
      * @return LoggerInterface|null
      */

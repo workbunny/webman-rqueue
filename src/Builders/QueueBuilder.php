@@ -56,7 +56,7 @@ abstract class QueueBuilder extends AbstractBuilder
                 }));
             }
             // main timer
-            $this->setMainTimer(Timer::add($this->timerInterval / 1000, function () use($worker) {
+            $this->setMainTimer(Timer::add($this->getTimerInterval() / 1000, function () use($worker) {
                 try {
                     // consume
                     $this->consume($worker);

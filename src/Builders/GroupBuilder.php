@@ -48,9 +48,9 @@ abstract class GroupBuilder extends AbstractBuilder
     {
         if($this->getConnection()){
             // consume timer
-            self::setMainTimer(Timer::add($this->timerInterval / 1000, function () use ($worker) {
+            self::setMainTimer(Timer::add($this->getTimerInterval() / 1000, function () use ($worker) {
                 // del timer
-                self::$_delTimer = Timer::add($this->timerInterval, function() use ($worker) {
+                self::$_delTimer = Timer::add($this->getTimerInterval(), function() use ($worker) {
                     // auto del
                     $this->del();
                 });
