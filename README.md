@@ -50,6 +50,9 @@
 - [Group 模式：多个消费组订阅消费](#group)
   - 支持普通消费
   - 支持延迟消费
+- [Adaptive 模式：Queue的自适应版消费者](#adaptive)
+  - 支持普通消费
+  - 支持延迟消费
 - [可靠的重载机制，防止消息意外丢失/重复消费](#temp)
   - 使用本地sqlite库储存因意外中断的消息
   - 自动加载本地消息至队列
@@ -223,6 +226,91 @@ composer require workbunny/webman-rqueue
 # 关闭延迟Builder
 ./webman workbunny:rqueue-remove testGroup --close --delayed --mode=group
 ./webman workbunny:rqueue-remove testGroup -cdm group
+# 二级菜单同理
+```
+### <a id='adaptive'>AdaptiveBuilder</a>
+
+#### 说明
+
+- AdaptiveBuilder与QueueBuilder的消费方式一致
+- AdaptiveBuilder底层定时器会根据*闲置阈值*进行判断，消费定时器根据*退避指数* x *当前消费间隔*进行重置消费间隔
+
+#### 相较于其他Builder的优势
+
+- 在消息负载较高的情况下，AdaptiveBuilder是普通的QueueBuilder
+- 在消息负载较低的情况下，AdaptiveBuilder根据闲置阈值对消费者的消费查询速率进行自适应退避调整，有效减少redis的查询压力
+- 在延时消费场景下，AdaptiveBuilder能有效减少因频繁查询redis而造成的redis-server CPU占用率较高的问题
+- 在普通消费模式下，AdaptiveBuilder相比于其他Builder能更快启动下一个消费周期，无需等待Timer的下一个loop，消费更及时
+
+#### 命令行
+
+- 创建
+```shell
+# 创建一个拥有单进程消费者的AdaptiveBuilder
+./webman workbunny:rqueue-builder testAdaptive --mode=adaptive
+./webman workbunny:rqueue-builder testAdaptive -m adaptive
+# 创建一个拥有4进程消费者的AdaptiveBuilder
+./webman workbunny:rqueue-builder testAdaptive 4 --mode=adaptive
+./webman workbunny:rqueue-builder testAdaptive 4 -m adaptive
+# 创建一个拥有单进程消费者的延迟AdaptiveBuilder
+./webman workbunny:rqueue-builder testAdaptive --delayed--mode=adaptive
+./webman workbunny:rqueue-builder testAdaptive -dm adaptive
+# 创建一个拥有4进程消费者的延迟AdaptiveBuilder
+./webman workbunny:rqueue-builder testAdaptive 4 --delayed--mode=adaptive
+./webman workbunny:rqueue-builder testAdaptive 4 -dm adaptive
+
+# 二级菜单
+
+# 在 process/workbunny/rqueue 目录下创建
+./webman workbunny:rqueue-builder testAdaptive --mode=adaptive
+./webman workbunny:rqueue-builder testAdaptive -m adaptive
+# 在 process/workbunny/rqueue/project 目录下创建 
+./webman workbunny:rqueue-builder project/testAdaptive --mode=adaptive
+./webman workbunny:rqueue-builder project/testAdaptive -m adaptive
+# 在 process/workbunny/rqueue/project 目录下创建 
+./webman workbunny:rqueue-builder project/testAllAdaptive --mode=adaptive
+./webman workbunny:rqueue-builder project/testAllAdaptive -m adaptive
+```
+
+- 移除
+
+移除包含了类文件的移除和配置的移除
+
+```shell
+# 移除Builder
+./webman workbunny:rqueue-remove testAdaptive --mode=adaptive
+./webman workbunny:rqueue-remove testAdaptive -m adaptive
+# 移除延迟Builder
+./webman workbunny:rqueue-remove testAdaptive --delayed --mode=adaptive
+./webman workbunny:rqueue-remove testAdaptive -dm adaptive
+# 二级菜单同理
+```
+
+- 开启
+
+开启仅对配置进行移除
+
+```shell
+# 开启Builder
+./webman workbunny:rqueue-builder testAdaptive --open --mode=adaptive
+./webman workbunny:rqueue-builder testAdaptive -om adaptive
+# 开启延迟Builder
+./webman workbunny:rqueue-builder testAdaptive --open --delayed --mode=adaptive
+./webman workbunny:rqueue-builder testAdaptive -odm adaptive
+# 二级菜单同理
+```
+
+- 关闭
+
+关闭仅对配置进行移除
+
+```shell
+# 关闭Builder
+./webman workbunny:rqueue-remove testAdaptive --close --mode=adaptive
+./webman workbunny:rqueue-remove testAdaptive -cm adaptive
+# 关闭延迟Builder
+./webman workbunny:rqueue-remove testAdaptive --close --delayed --mode=adaptive
+./webman workbunny:rqueue-remove testAdaptive -cdm adaptive
 # 二级菜单同理
 ```
 
