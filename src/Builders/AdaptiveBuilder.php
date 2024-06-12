@@ -137,21 +137,21 @@ class $className extends AdaptiveBuilder
         'pending_timeout' => 0             
     ];
     
-    /** @var float|null 消费间隔 1ms */
+    /** @var float|null 初始消费间隔 1ms */
     protected ?float \$timerInterval = 1.0;
     
-    /** @var string redis配置 */
-    protected string \$connection = 'default';
+    /** @var float 最大消费间隔 ms */
+    protected float \$maxTimerInterval = 0.0;
     
      /** @var int 闲置阈值 ms */
     protected int \$idleThreshold = 0;
 
     /** @var int 退避指数 */
     protected int \$avoidIndex = 0;
-
-    /** @var float 最大定时器间隔 ms */
-    protected float \$maxTimerInterval = 0.0;
     
+    /** @var string redis配置 */
+    protected string \$connection = 'default';
+
     /** @inheritDoc */
     public function handler(string \$id, array \$value, Connection \$connection): bool 
     {

@@ -41,6 +41,16 @@ trait AdaptiveTimerMethod
     }
 
     /**
+     * 设置最后一次获得消息得毫秒时间戳
+     * @param int $ms
+     * @return void
+     */
+    public static function setLastMessageMilliTimestamp(int $ms): void
+    {
+        self::$lastMessageMilliTimestamp = $ms;
+    }
+
+    /**
      * 是否达到最大间隔
      *
      * @return bool
@@ -141,8 +151,19 @@ trait AdaptiveTimerMethod
     }
 
     /**
+     * 获取当前毫秒时间戳
+     *
+     * @return int
+     */
+    public static function getMilliTime(): int
+    {
+        return intval(microtime(true) * 1000);
+    }
+
+    /**
      * 添加自适应退避定时器
      *
+     *  - 当满足闲置时长时开始执行退避
      *  - 执行函数正反馈时，定时器初始化重置
      *  - 执行函数负反馈时
      *      - 距上次正反馈的间隔时长大于闲置阈值且未到达最大间隔时，定时器间隔据退避指数累加
@@ -161,16 +182,18 @@ trait AdaptiveTimerMethod
         $id = spl_object_hash($func);
         // 设置初始间隔
         $this->setTimerInitialInterval($this->getTimerInterval());
+        // 初始化时间
+        self::setLastMessageMilliTimestamp(self::getMilliTime());
         // 创建定时器
         self::$timerIdMap[$id] = Worker::$globalEvent->add($this->getTimerInitialInterval(), EventInterface::EV_TIMER,
             $callback = function (...$args) use ($func, $id, &$callback)
             {
                 // 获取毫秒时间戳
-                $nowMilliTimestamp = intval(microtime(true) * 1000);
+                $nowMilliTimestamp = self::getMilliTime();
                 // 是否开启自适应
                 $enable = (
-                    // 设置了退避指数、闲置阈值
-                    $this->getAvoidIndex() > 0 and $this->getIdleThreshold() > 0 and
+                    // 设置了退避指数
+                    $this->getAvoidIndex() > 0 and
                     // 定时器间隔小于最大间隔
                     $this->getMaxTimerInterval() > $this->getTimerInitialInterval()
                 );
@@ -178,7 +201,7 @@ trait AdaptiveTimerMethod
                 try {
                     if ($result = \call_user_func($func, ...$args)) {
                         // 设置执行时间
-                        self::$lastMessageMilliTimestamp = $nowMilliTimestamp;
+                        self::setLastMessageMilliTimestamp($nowMilliTimestamp);
                     }
                 } catch (\Throwable){
                     // 异常为负反馈
@@ -202,7 +225,7 @@ trait AdaptiveTimerMethod
                             $nowMilliTimestamp - self::getLastMessageMilliTimestamp() > $this->getIdleThreshold() and // 闲置超过闲置阈值
                             !self::isMaxTimerInterval() // 非最大间隔
                         ) {
-                            $interval = min($this->getAvoidIndex() * $this->getTimerInitialInterval(), $this->getMaxTimerInterval());
+                            $interval = min($this->getAvoidIndex() * $this->getTimerInterval(), $this->getMaxTimerInterval());
                             // 如果到达最大值
                             if ($interval >= $this->getMaxTimerInterval()) {
                                 self::$isMaxTimerInterval = true;
@@ -211,11 +234,11 @@ trait AdaptiveTimerMethod
                             $this->setTimerInterval($interval);
                         }
                     }
-                    // 是否需要设置定时器
+                    // 重置定时器
                     if ($setTimer) {
-                        // 移除定时器
+                        // 移除旧定时器
                         self::adaptiveTimerDelete($id);
-                        // 新建定时器
+                        // 创建新定时器
                         self::$timerIdMap[$id] = Worker::$globalEvent->add($this->getTimerInterval(), EventInterface::EV_TIMER, $callback);
                     }
                 }
