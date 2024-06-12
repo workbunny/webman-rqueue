@@ -113,7 +113,7 @@ abstract class AdaptiveBuilder extends AbstractBuilder
 namespace $namespace;
 
 use Workbunny\WebmanRqueue\Headers;
-use Workbunny\WebmanRqueue\Builders\QueueBuilder;
+use Workbunny\WebmanRqueue\Builders\AdaptiveBuilder;
 use Illuminate\Redis\Connections\Connection;
 
 class $className extends AdaptiveBuilder
