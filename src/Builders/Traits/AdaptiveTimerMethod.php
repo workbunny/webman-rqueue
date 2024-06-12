@@ -185,7 +185,7 @@ trait AdaptiveTimerMethod
         // 初始化时间
         self::setLastMessageMilliTimestamp(self::getMilliTime());
         // 创建定时器
-        self::$timerIdMap[$id] = Worker::$globalEvent->add($this->getTimerInitialInterval(), EventInterface::EV_TIMER,
+        self::$timerIdMap[$id] = Worker::$globalEvent->add($this->getTimerInitialInterval() / 1000, EventInterface::EV_TIMER,
             $callback = function (...$args) use ($func, $id, &$callback)
             {
                 // 获取毫秒时间戳
@@ -239,7 +239,7 @@ trait AdaptiveTimerMethod
                         // 移除旧定时器
                         self::adaptiveTimerDelete($id);
                         // 创建新定时器
-                        self::$timerIdMap[$id] = Worker::$globalEvent->add($this->getTimerInterval(), EventInterface::EV_TIMER, $callback);
+                        self::$timerIdMap[$id] = Worker::$globalEvent->add($this->getTimerInterval() / 1000, EventInterface::EV_TIMER, $callback);
                     }
                 }
             },
