@@ -11,10 +11,10 @@
     <a href="https://github.com/workbunny/webman-rqueue/actions">
         <img src="https://github.com/workbunny/webman-rqueue/actions/workflows/CI.yml/badge.svg" alt="Build Status">
     </a>
-    <a href="https://github.com/workbunny/webman-rqueue/blob/main/composer.json">
+    <a href="https://github.com/workbunny/webman-rqueue/blob/master/composer.json">
         <img alt="PHP Version Require" src="http://poser.pugx.org/workbunny/webman-rqueue/require/php">
     </a>
-    <a href="https://github.com/workbunny/webman-rqueue/blob/main/LICENSE">
+    <a href="https://github.com/workbunny/webman-rqueue/blob/master/LICENSE">
         <img alt="GitHub license" src="http://poser.pugx.org/workbunny/webman-rqueue/license">
     </a>
 
@@ -61,7 +61,14 @@
   - BuilderClass继承模式（类似ORM的ModelClass）
   - [支持自定义BuilderClass，实现自定义的消费逻辑](#custom)
 
+
 ## 安装
+
+### 环境依赖
+
+- **php >=8.0**
+- **webman >= 1.0**
+- **redis >= 6.2**
 
 ```
 composer require workbunny/webman-rqueue
