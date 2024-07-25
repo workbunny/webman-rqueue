@@ -12,10 +12,10 @@
         <img src="https://github.com/workbunny/webman-rqueue/actions/workflows/CI.yml/badge.svg" alt="Build Status">
     </a>
     <a href="https://github.com/workbunny/webman-rqueue/blob/master/composer.json">
-        <img alt="PHP Version Require" src="http://poser.pugx.org/workbunny/webman-rqueue/require/php">
+        <img alt="PHP Version Require" src="https://badgen.net/packagist/php/workbunny/webman-rqueue">
     </a>
     <a href="https://github.com/workbunny/webman-rqueue/blob/master/LICENSE">
-        <img alt="GitHub license" src="http://poser.pugx.org/workbunny/webman-rqueue/license">
+        <img alt="GitHub license" src="https://badgen.net/packagist/license/workbunny/webman-rqueue">
     </a>
 
 </div>
