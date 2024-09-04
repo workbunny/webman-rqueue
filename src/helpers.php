@@ -7,12 +7,14 @@ use Webman\Config;
 use Workbunny\WebmanRqueue\Builders\AbstractBuilder;
 use Workbunny\WebmanRqueue\Builders\QueueBuilder;
 use Workbunny\WebmanRqueue\Exceptions\WebmanRqueueException;
+use Workerman\Worker;
 
 /**
  * 同步生产
  * @param QueueBuilder $builder
  * @param string $body
  * @param array $headers
+ * @param bool $temp
  * @return int|false
  * @throws WebmanRqueueException
  */
@@ -33,6 +35,15 @@ function sync_publish(AbstractBuilder $builder, string $body, array $headers = [
 function sync_publish_get_ids(AbstractBuilder $builder, string $body, array $headers = [], bool $temp = false) : array
 {
     return $builder->publishGetIds($body, $headers, temp: $temp);
+}
+
+/**
+ * Version 5.x uses a new event interface
+ * @return bool
+ */
+function is_worker_version_5(): bool
+{
+    return version_compare(Worker::VERSION, '5.0.0', '>=');
 }
 
 /**
