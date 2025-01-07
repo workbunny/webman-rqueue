@@ -264,10 +264,12 @@ trait AdaptiveTimerMethod
         }
         if ($id === null) {
             foreach(self::$timerIdMap as $id) {
-                if (is_worker_version_5() and method_exists(Worker::$globalEvent, 'offDelay')) {
-                    Worker::$globalEvent->offDelay($id);
-                } else {
-                    Worker::$globalEvent->del($id, EventInterface::EV_TIMER);
+                if (is_int($id)) {
+                    if (is_worker_version_5() and method_exists(Worker::$globalEvent, 'offDelay')) {
+                        Worker::$globalEvent->offDelay($id);
+                    } else {
+                        Worker::$globalEvent->del($id, EventInterface::EV_TIMER);
+                    }
                 }
             }
             self::$timerIdMap = [];
