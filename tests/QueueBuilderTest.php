@@ -4,6 +4,7 @@ namespace Workbunny\Tests;
 
 use Redis;
 use RedisException;
+use Webman\Config;
 use Workbunny\Tests\Builders\TestQueueBuilder;
 use Workbunny\Tests\Builders\TestQueueBuilderDelayed;
 use Workbunny\WebmanRqueue\Builders\AbstractBuilder;
@@ -18,7 +19,7 @@ final class QueueBuilderTest extends BaseTestCase
     protected function setUp(): void
     {
         AbstractBuilder::$debug = true;
-        require_once __DIR__ . '/functions.php';
+        Config::load(__DIR__ . '/config', ['route']);
         $this->_queueBuilder = new TestQueueBuilder();
         $this->_queueBuilderDelayed = new TestQueueBuilderDelayed();
         parent::setUp();

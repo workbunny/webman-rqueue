@@ -4,6 +4,7 @@ namespace Workbunny\WebmanRqueue\Commands;
 
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Output\OutputInterface;
+use Workbunny\WebmanRqueue\Builders\AbstractBuilder;
 use Workbunny\WebmanRqueue\Builders\AdaptiveBuilder;
 use Workbunny\WebmanRqueue\Builders\GroupBuilder;
 use Workbunny\WebmanRqueue\Builders\QueueBuilder;
@@ -15,21 +16,12 @@ abstract class AbstractCommand extends Command
     public static string $baseNamespace = 'process\workbunny\rqueue';
 
     /**
-     * @var string[]
-     */
-    protected array $builderList = [
-        'queue'    => QueueBuilder::class,
-        'group'    => GroupBuilder::class,
-        'adaptive' => AdaptiveBuilder::class
-    ];
-
-    /**
      * @param string $name
      * @return string|null
      */
     protected function getBuilder(string $name): ?string
     {
-        return $this->builderList[$name] ?? null;
+        return AbstractBuilder::getBuilderClass($name);
     }
 
     protected function info(OutputInterface $output, string $message): void

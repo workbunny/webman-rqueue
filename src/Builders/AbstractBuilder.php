@@ -20,16 +20,27 @@ abstract class AbstractBuilder
 
     public static bool $debug = false;
 
-    /** @var string redis配置 */
-    protected string $connection = 'default';
-
-    /** @var float|null 消费间隔 1ms */
-    protected ?float $timerInterval = 1;
+    /**
+     * @var string[]
+     */
+    protected static array $builderList = [
+        'queue'    => QueueBuilder::class,
+        'co-queue' => CoQueueBuilder::class,
+        'group'    => GroupBuilder::class,
+        'co-group' => CoGroupBuilder::class,
+        'adaptive' => AdaptiveBuilder::class
+    ];
 
     /**
      * @var AbstractBuilder[]
      */
     private static array $_builders = [];
+
+    /** @var string redis配置 */
+    protected string $connection = 'default';
+
+    /** @var float|null 消费间隔 1ms */
+    protected ?float $timerInterval = 1;
 
     /**
      * @var int|null
@@ -79,6 +90,17 @@ abstract class AbstractBuilder
             self::$_builders[$class] = new $class();
         }
         return self::$_builders[$class];
+    }
+
+    /**
+     * 通过mode获取builder类名
+     *
+     * @param string $mode
+     * @return string|null
+     */
+    public static function getBuilderClass(string $mode): ?string
+    {
+        return static::$builderList[$mode] ?? null;
     }
 
     /**

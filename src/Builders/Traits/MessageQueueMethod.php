@@ -404,7 +404,7 @@ trait MessageQueueMethod
                 $queueStreams[$queueName] = '>';
             }
             // group read
-            if($res = $client->xReadGroup(
+            if ($res = $client->xReadGroup(
                 $groupName, $consumerName, $queueStreams, $builderConfig->getPrefetchCount(),
                 $this->getTimerInterval() >= 1.0 ? (int)$this->getTimerInterval() : null
             )) {

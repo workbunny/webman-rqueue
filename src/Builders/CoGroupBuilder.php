@@ -12,36 +12,8 @@ use Workerman\Timer;
 use Workerman\Worker;
 use function Workbunny\WebmanRqueue\config;
 
-abstract class GroupBuilder extends AbstractBuilder
+abstract class CoGroupBuilder extends GroupBuilder
 {
-    /**
-     * 配置
-     *
-     * @var array = [
-     *  'queues'          => ['example'],
-     *  'group'           => 'example',
-     *  'delayed'         => false,
-     *  'prefetch_count'  => 1,
-     *  'queue_size'      => 0,
-     *  'pending_timeout' => 0
-     * ]
-     */
-    protected array $configs = [];
-
-    /** @var int|null 自动移除定时器 */
-    protected static ?int $_delTimer = null;
-
-    public function __construct(?LoggerInterface $logger = null)
-    {
-        parent::__construct($logger);
-        $name = self::getName();
-        $this->getBuilderConfig()->setGroup($this->configs['group'] ?? $name);
-        $this->getBuilderConfig()->setQueues($this->configs['queues'] ?? [$name]);
-        $this->getBuilderConfig()->setQueueSize($this->configs['queue_size'] ?? 0);
-        $this->getBuilderConfig()->setPrefetchCount($this->configs['prefetch_count'] ?? 0);
-        $this->getBuilderConfig()->setDelayed($this->configs['delayed'] ?? false);
-        $this->getBuilderConfig()->setCallback([$this, 'handler']);
-    }
 
     /** @inheritDoc */
     public function onWorkerStart(Worker $worker): void
@@ -59,8 +31,7 @@ abstract class GroupBuilder extends AbstractBuilder
                     $this->claim($worker, $pendingTimeout);
                 }));
             }
-            // consume timer
-            self::setMainTimer(Timer::add($this->getTimerInterval() / 1000, function () use ($worker) {
+            while (1) {
                 try {
                     // consume
                     $this->consume($worker, false);
@@ -75,36 +46,14 @@ abstract class GroupBuilder extends AbstractBuilder
                     $this->getLogger()?->warning('Consume exception. ', [
                         'message' => $exception->getMessage(), 'code' => $exception->getCode()
                     ]);
+                } finally {
+                    // 协程随机出让 5 - 10 ms
+                    $coInterval = $this->configs['co_interval'] ?? [];
+                    Timer::sleep(($coInterval ? rand($coInterval[0], $coInterval[1]) : rand(5, 10)) / 1000);
                 }
-            }));
-        }
-    }
-
-    /** @inheritDoc */
-    public function onWorkerStop(Worker $worker): void
-    {
-        if($this->getConnection()) {
-            try {
-                $this->getConnection()->client()->close();
-            }catch (RedisException $e) {
-                echo $e->getMessage() . PHP_EOL;
             }
         }
-        if (self::getMainTimer()) {
-            Timer::del(self::getMainTimer());
-        }
-        if ($this->getPendingTimer()) {
-            Timer::del($this->getPendingTimer());
-        }
-        if(self::$_delTimer) {
-            Timer::del(self::$_delTimer);
-        }
     }
-
-    /** @inheritDoc */
-    public function onWorkerReload(Worker $worker): void
-    {}
-
 
     /** @inheritDoc */
     public static function classContent(string $namespace, string $className, bool $isDelay): string
@@ -117,10 +66,10 @@ abstract class GroupBuilder extends AbstractBuilder
 namespace $namespace;
 
 use Workbunny\WebmanRqueue\Headers;
-use Workbunny\WebmanRqueue\Builders\GroupBuilder;
+use Workbunny\WebmanRqueue\Builders\CoGroupBuilder;
 use Illuminate\Redis\Connections\Connection;
 
-class $className extends GroupBuilder
+class $className extends CoGroupBuilder
 {
     
     /** @see QueueBuilder::\$configs */
@@ -138,11 +87,13 @@ class $className extends GroupBuilder
         // Queue size
         'queue_size'      => 0,
         // 消息pending超时，毫秒
-        'pending_timeout' => 0           
+        'pending_timeout' => 0,
+        // 协程随机出让时间间隔，毫秒
+        'co_interval'     => [5, 10]           
     ];
     
-    /** @var float|null 消费间隔 1ms */
-    protected ?float \$timerInterval = 1.0;
+    /** @var float|null 消费长轮询时长/消费间隔 100ms */
+    protected ?float \$timerInterval = 100.0;
     
     /** @var string redis配置 */
     protected string \$connection = 'default';
@@ -159,16 +110,4 @@ class $className extends GroupBuilder
 }
 doc;
     }
-
-    /**
-     * 消费函数
-     * @param string $id
-     * @param array $value = [
-     *     '_header' => json_string,
-     *     '_body'  => string,
-     * ]
-     * @param Connection $connection
-     * @return bool
-     */
-    abstract public function handler(string $id, array $value, Connection $connection): bool;
 }
