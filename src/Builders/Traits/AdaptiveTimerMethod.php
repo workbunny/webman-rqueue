@@ -189,6 +189,7 @@ trait AdaptiveTimerMethod
         {
             // 获取毫秒时间戳
             $nowMilliTimestamp = self::getMilliTime();
+            $lastMessageMilliTimestamp = self::getLastMessageMilliTimestamp();
             // 是否开启自适应
             $enable = (
                 // 设置了退避指数
@@ -208,18 +209,23 @@ trait AdaptiveTimerMethod
             }
             // 如果自适应开启
             if ($enable) {
+                $setTimer = false;
                 // 正反馈
                 if ($result) {
                     // 归零
                     self::$isMaxTimerInterval = false;
-                    // 重新设置定时器
-                    $setTimer = true;
-                    // 定时器初始化
-                    $this->setTimerInterval($this->getTimerInitialInterval());
+                    // 执行时长+消息等待时长
+                    $processTimer = self::getMilliTime() - $lastMessageMilliTimestamp;
+                    // 如果processTimer小于当前定时器间隔，则重置时间间隔为processTimer，否则保持当前定时器间隔
+                    if ($processTimer < $this->getTimerInterval()) {
+                        // 重新设置定时器
+                        $setTimer = true;
+                        // 定时器设置
+                        $this->setTimerInterval(min($processTimer, $this->getMaxTimerInterval()));
+                    }
                 }
                 // 负反馈
                 else {
-                    $setTimer = false;
                     if (
                         $nowMilliTimestamp - self::getLastMessageMilliTimestamp() > $this->getIdleThreshold() and // 闲置超过闲置阈值
                         !self::isMaxTimerInterval() // 非最大间隔
@@ -239,7 +245,7 @@ trait AdaptiveTimerMethod
                     self::adaptiveTimerDelete($id);
                     // 创建新定时器
                     self::$timerIdMap[$id] = (is_worker_version_5() and method_exists(Worker::$globalEvent, 'repeat'))
-                        ? Worker::$globalEvent->repeat(floatval($this->getTimerInitialInterval() / 1000), $callback, $args)
+                        ? Worker::$globalEvent->repeat(floatval($this->getTimerInterval() / 1000), $callback, $args)
                         : Worker::$globalEvent->add(floatval($this->getTimerInterval() / 1000), EventInterface::EV_TIMER, $callback);
                 }
             }
