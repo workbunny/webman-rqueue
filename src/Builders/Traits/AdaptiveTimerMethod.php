@@ -238,15 +238,15 @@ trait AdaptiveTimerMethod
                     // 移除旧定时器
                     self::adaptiveTimerDelete($id);
                     // 创建新定时器
-                    self::$timerIdMap[$id] = is_worker_version_5() and method_exists(Worker::$globalEvent, 'delay')
-                        ? Worker::$globalEvent->delay(floatval($this->getTimerInitialInterval() / 1000), $callback, $args)
+                    self::$timerIdMap[$id] = (is_worker_version_5() and method_exists(Worker::$globalEvent, 'repeat'))
+                        ? Worker::$globalEvent->repeat(floatval($this->getTimerInitialInterval() / 1000), $callback, $args)
                         : Worker::$globalEvent->add(floatval($this->getTimerInterval() / 1000), EventInterface::EV_TIMER, $callback);
                 }
             }
         };
         // 创建定时器
-        self::$timerIdMap[$id] = is_worker_version_5() and method_exists(Worker::$globalEvent, 'delay')
-            ? Worker::$globalEvent->delay(floatval($this->getTimerInitialInterval() / 1000), $callback, $args)
+        self::$timerIdMap[$id] = (is_worker_version_5() and method_exists(Worker::$globalEvent, 'repeat'))
+            ? Worker::$globalEvent->repeat(floatval($this->getTimerInitialInterval() / 1000), $callback, $args)
             : Worker::$globalEvent->add(floatval($this->getTimerInitialInterval() / 1000), EventInterface::EV_TIMER, $callback, $args);
         return $id;
     }
@@ -265,8 +265,8 @@ trait AdaptiveTimerMethod
         if ($id === null) {
             foreach(self::$timerIdMap as $id) {
                 if (is_int($id)) {
-                    if (is_worker_version_5() and method_exists(Worker::$globalEvent, 'offDelay')) {
-                        Worker::$globalEvent->offDelay($id);
+                    if (is_worker_version_5() and method_exists(Worker::$globalEvent, 'offRepeat')) {
+                        Worker::$globalEvent->offRepeat($id);
                     } else {
                         Worker::$globalEvent->del($id, EventInterface::EV_TIMER);
                     }
@@ -275,8 +275,8 @@ trait AdaptiveTimerMethod
             self::$timerIdMap = [];
         } else {
             if ($id = self::$timerIdMap[$id] ?? null) {
-                if (is_worker_version_5() and method_exists(Worker::$globalEvent, 'offDelay')) {
-                    Worker::$globalEvent->offDelay($id);
+                if (is_worker_version_5() and method_exists(Worker::$globalEvent, 'offRepeat')) {
+                    Worker::$globalEvent->offRepeat($id);
                 } else {
                     Worker::$globalEvent->del($id, EventInterface::EV_TIMER);
                 }
