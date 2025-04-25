@@ -212,16 +212,22 @@ trait AdaptiveTimerMethod
                 $setTimer = false;
                 // 正反馈
                 if ($result) {
-                    // 归零
-                    self::$isMaxTimerInterval = false;
-                    // 执行时长+消息等待时长
-                    $processTimer = self::getMilliTime() - $lastMessageMilliTimestamp;
-                    // 如果processTimer小于当前定时器间隔，则重置时间间隔为processTimer，否则保持当前定时器间隔
-                    if ($processTimer < $this->getTimerInterval()) {
+                    // 执行时长
+                    $processTimer = (self::getLastMessageMilliTimestamp() - $nowMilliTimestamp);
+                    // 如果processTimer<=当前定时器间隔，则定时器初始化，否则保持当前定时器状态
+                    if ($processTimer <= $this->getTimerInterval()) {
+                        // 归零
+                        self::$isMaxTimerInterval = ($processTimer >= $this->getMaxTimerInterval());
                         // 重新设置定时器
                         $setTimer = true;
-                        // 定时器设置
-                        $this->setTimerInterval(min($processTimer, $this->getMaxTimerInterval()));
+                        // 定时器间隔初始化
+                        $this->setTimerInterval(
+                            max(
+                                $this->getTimerInitialInterval(), min(
+                                    $processTimer, $this->getMaxTimerInterval()
+                                )
+                            )
+                        );
                     }
                 }
                 // 负反馈
