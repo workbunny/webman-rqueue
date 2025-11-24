@@ -348,8 +348,8 @@ trait MessageQueueMethod
                 );
                 if ($datas) {
                     $this->claimStartTags[$queueName][$groupName][$consumerName] = $datas[0] ?? '0-0';
-                    if ($datas = $datas[2] ?? []) {
-                        if ($client->xAck($queueName, $groupName, $datas)) {
+                    if ($datas = $datas[1] ?? []) {
+                        if ($client->xAck($queueName, $groupName, array_keys($datas))) {
                             // pending超时的消息自动ack，并存入本地缓存
                             try {
                                 foreach ($datas as $message) {
