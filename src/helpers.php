@@ -51,7 +51,7 @@ function is_worker_version_5(): bool
  * @param mixed|null $default
  * @return array|mixed|null
  */
-function config(string $key = null, mixed $default = null): mixed
+function config(?string $key = null, mixed $default = null): mixed
 {
     if(AbstractBuilder::$debug) {
         Config::load(config_path());
