@@ -140,7 +140,7 @@ trait MessageTempMethod
                                 $client = $this->getConnection()->client();
                                 foreach ($collection as $item) {
                                     if ($client->xAdd($item->queue,'*', json_decode($item->data, true))) {
-                                        $connection->table('pending')->delete($item->id);
+                                        $connection->table('requeue')->delete($item->id);
                                     }
                                 }
                             });

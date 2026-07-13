@@ -82,7 +82,7 @@ trait MessageQueueMethod
         $queues = $queueName ? [$queueName] : $this->getBuilderConfig()->getQueues();
         $result = [];
         foreach ($queues as $queue) {
-            $result[$queue] = $this->getConnection()->client()->xInfo('CONSUMERS', $queueName, $groupName);
+            $result[$queue] = $this->getConnection()->client()->xInfo('CONSUMERS', $queue, $groupName);
         }
         return $result;
     }
@@ -166,7 +166,7 @@ trait MessageQueueMethod
         try {
             $this->getConnection()->client()->xAck($queueName, $groupName, $id);
             return true;
-        } catch (RedisException) {
+        } catch (RedisException $exception) {
             Log::channel('plugin.workbunny.webman-rqueue.warning')?->warning("Ack failed [$queueName->$groupName]. ", [
                 'message' => $exception->getMessage(), 'code' => $exception->getCode(),
                 'file'  => $exception->getFile() . ':' . $exception->getLine(),
