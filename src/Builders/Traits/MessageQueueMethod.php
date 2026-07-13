@@ -134,6 +134,8 @@ trait MessageQueueMethod
                 // 获取当前队列所有group中最落后的游标id
                 foreach ($lastDeliveredIds as $lastDeliveredId) {
                     list($left, $right) = explode('-', $lastDeliveredId);
+                    $left = (int)$left;
+                    $right = (int)$right;
                     if (
                         ($left > $leftMin and $leftMin !== null) or
                         ($left == $leftMin and $right > $rightMin and $leftMin !== null)
@@ -145,10 +147,14 @@ trait MessageQueueMethod
                 }
                 $lastDeliveredId = "$leftMin-$rightMin";
                 $result = $client->xRange($queueName, $queueFirstId, $lastDeliveredId, 100);
+                $delIds = [];
                 foreach ($result as $id => $value) {
                     if($id !== $lastDeliveredId) {
-                        $client->xDel($queueName, [$id]);
+                        $delIds[] = $id;
                     }
+                }
+                if ($delIds) {
+                    $client->xDel($queueName, $delIds);
                 }
             }
         }
@@ -359,9 +365,17 @@ trait MessageQueueMethod
                                     echo 'temp pending insert' . PHP_EOL;
                                     $this->requeue($body, $header->toArray());
                                 }
+                            } catch (\Throwable $throwable) {
+                                Log::channel('plugin.workbunny.webman-rqueue.warning')?->warning('Claim pending requeue failed. ', [
+                                    'message' => $throwable->getMessage(),
+                                    'queue'   => $queueName,
+                                    'file'    => $throwable->getFile() . ':' . $throwable->getLine(),
+                                ]);
+                                $this->getLogger()?->warning('Claim pending requeue failed. ', [
+                                    'message' => $throwable->getMessage(),
+                                    'queue'   => $queueName,
+                                ]);
                             }
-                                // 忽略失败
-                            catch (\Throwable) {}
 
                             if ($autoDel) {
                                 // 移除

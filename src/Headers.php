@@ -49,7 +49,13 @@ class Headers
             if(\property_exists($this, $key)) {
                 try {
                     $this->$key = $value;
-                }catch (\Throwable $throwable){}
+                } catch (\Throwable $throwable){
+                    // Log type mismatch warning
+                    trigger_error(
+                        "WebmanRqueue Headers: Failed to assign property '$key' with value of type " . gettype($value) . ". " . $throwable->getMessage(),
+                        E_USER_WARNING
+                    );
+                }
             }
         }
         return $this;

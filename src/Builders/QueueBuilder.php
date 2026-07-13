@@ -6,7 +6,6 @@ use Illuminate\Redis\Connections\Connection;
 use Psr\Log\LoggerInterface;
 use RedisException;
 use support\Log;
-use Workbunny\WebmanRqueue\Builders\Traits\MessageQueueMethod;
 use Workbunny\WebmanRqueue\Exceptions\WebmanRqueueException;
 use Workerman\Timer;
 use Workerman\Worker;
@@ -87,6 +86,12 @@ abstract class QueueBuilder extends AbstractBuilder
         }
         if($this->getMainTimer()) {
             Timer::del($this->getMainTimer());
+        }
+        if($this->getPendingTimer()) {
+            Timer::del($this->getPendingTimer());
+        }
+        if($this->_requeueTimer) {
+            Timer::del($this->_requeueTimer);
         }
     }
 

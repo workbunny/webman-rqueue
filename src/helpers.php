@@ -74,7 +74,7 @@ function config_path(): string
  */
 function runtime_path(): string
 {
-    return AbstractBuilder::$debug ? base_path() . '\runtime' : \runtime_path();
+    return AbstractBuilder::$debug ? base_path() . DIRECTORY_SEPARATOR . 'runtime' : \runtime_path();
 }
 
 /**
