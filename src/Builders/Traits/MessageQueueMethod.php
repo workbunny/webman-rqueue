@@ -242,21 +242,34 @@ trait MessageQueueMethod
         $ids = [];
         try {
             foreach ($queues as $queue) {
-                if ($queueSize > 0) {
-                    $queueLen = $client->xLen($queue);
-                    if($queueLen >= $queueSize){
-                        throw new WebmanRqueueException('Queue size exceeded.');
-                    }
-                }
-                if ($id = $client->xAdd($queue, (string)$header->_id, $data = [
+                $data = [
                     '_header' => $header->toString(),
                     '_body'   => $body,
-                ])) {
-                    $ids[$queue] = $id;
+                ];
+                if ($queueSize > 0) {
+                    // Atomic XLEN + XADD via Lua script to prevent race condition
+                    $result = $client->eval(
+                        "local len = redis.call('XLEN', KEYS[1])\n" .
+                        "if len >= tonumber(ARGV[1]) then\n" .
+                        "    return nil\n" .
+                        "end\n" .
+                        "return redis.call('XADD', KEYS[1], ARGV[2], ARGV[3], ARGV[4], ARGV[5], ARGV[6])",
+                        [$queue, $queueSize, (string)$header->_id, '_header', $data['_header'], '_body', $data['_body']],
+                        1
+                    );
+                    if ($result) {
+                        $ids[$queue] = $result;
+                    } else {
+                        throw new WebmanRqueueException('Queue size exceeded.');
+                    }
                 } else {
-                    if ($temp) {
-                        $this->tempInsert('requeue', $queue, $data);
-                        $ids["<temp>$queue</temp>"] = $id;
+                    if ($id = $client->xAdd($queue, (string)$header->_id, $data)) {
+                        $ids[$queue] = $id;
+                    } else {
+                        if ($temp) {
+                            $this->tempInsert('requeue', $queue, $data);
+                            $ids["<temp>$queue</temp>"] = $id;
+                        }
                     }
                 }
             }
